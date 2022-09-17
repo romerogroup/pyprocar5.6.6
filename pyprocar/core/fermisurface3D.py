@@ -15,8 +15,7 @@ import scipy.interpolate as interpolate
 from matplotlib import colors as mpcolors
 from matplotlib import cm
 
-from .brillouin_zone import BrillouinZone
-from ..core import Isosurface, Surface
+from . import Isosurface, Surface, BrillouinZone
 
 
 np.set_printoptions(threshold=sys.maxsize)

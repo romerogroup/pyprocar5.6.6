@@ -1,3 +1,8 @@
+__author__ = "Pedram Tavadze"
+__maintainer__ = "Pedram Tavadze"
+__email__ = "petavazohi@mail.wvu.edu"
+__date__ = "March 31, 2020"
+
 from typing import List
 
 import numpy as np
@@ -5,15 +10,8 @@ import pyvista as pv
 import trimesh
 from scipy.spatial import Voronoi
 
-from ..core import Surface
+from .surface import Surface
 
-__author__ = "Pedram Tavadze"
-__maintainer__ = "Pedram Tavadze"
-__email__ = "petavazohi@mail.wvu.edu"
-__date__ = "March 31, 2020"
-
-# TODO add python typing
-# TODO move this module to core
 
 class Lines:
     def __init__(self, 

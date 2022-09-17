@@ -17,7 +17,7 @@ import networkx as nx
 from matplotlib import pylab as plt
 import pyvista
 
-from ..fermisurface3d import BrillouinZone
+from .brillouin_zone import BrillouinZone
 from ..utils import Unfolder, mathematics
 
 # TODO add python typing to all functions

@@ -1,13 +1,13 @@
-__author__ = "Pedram Tavadze and Logan Lang"
-__maintainer__ = "Pedram Tavadze and Logan Lang"
-__email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
+__author__ = "Logan Lang"
+__maintainer__ = "Logan Lang"
+__email__ = "lllang@mix.wvu.edu"
 __date__ = "March 31, 2020"
 
 import sys
 import functools
 import copy
 from typing import List, Tuple
-
+import os
 
 import numpy as np
 from matplotlib import colors as mpcolors
@@ -17,10 +17,9 @@ import vtk
 import pyvista as pv
 from pyvista.utilities import NORMALS, generate_plane, get_array, try_callback
 
-from pyprocar.fermisurface3d import fermisurface3D
+# from pyprocar.fermisurface3d import fermisurface3D
 
-# from .core.surface import boolean_add
-from ..fermisurface3d import FermiSurface3D
+from ..core import FermiSurface3D
 from ..splash import welcome
 from ..utilsprocar import UtilsProcar
 from ..io.procarparser import ProcarParser
@@ -37,24 +36,18 @@ np.set_printoptions(threshold=sys.maxsize)
 
 
 class FermiHandler:
+    """_summary_
+    This class handles the plotting of the fermi surface. Initialize by specifying the code and directory name where the data is stored. 
+    Then call one of the plotting methods provided.
+    """
     def __init__(self,
             code:str,
-            procar:str="PROCAR",
-            outcar:str="OUTCAR",
-            poscar:str="POSCAR",
             dirname:str="",
-            infile:str="in.bxsf",
-            abinit_output:str=None,
             repair:bool=False,
             apply_symmetry:bool=True,
         ):
         self.code = code
-        self.procar=procar
-        self.poscar=poscar
-        self.outcar=outcar
         self.dirname=dirname
-        self.infile=infile
-        self.abinit_output=abinit_output
         self.repair = repair
         self.apply_symmetry = apply_symmetry
 
@@ -798,22 +791,33 @@ class FermiHandler:
             plt.savefig(savefig)
 
     def __parse_code(self):
-        if self.code == "vasp" or self.code == "abinit":
-            if self.repair:
-                repairhandle = UtilsProcar()
-                repairhandle.ProcarRepair(self.procar, self.procar)
-                print("PROCAR repaired. Run with repair=False next time.")
+
+        """_summary_
+        Helper method to handle the parsing of the codes
+        Returns:
+            _type_: _description_
+        """
 
         if self.code == "vasp":
-            outcar = io.vasp.Outcar(filename=self.outcar)
-            
+            if self.dirname is None:
+                self.dirname = "fermi"
+            outcar_file = f"{self.dirname}{os.sep}OUTCAR"
+            poscar_file = f"{self.dirname}{os.sep}POSCAR"
+            procar_file = f"{self.dirname}{os.sep}PROCAR"
+
+            if self.repair:
+                repairhandle = UtilsProcar()
+                repairhandle.ProcarRepair(procar_file, procar_file)
+                print("PROCAR repaired. Run with repair=False next time.")
+
+            outcar = io.vasp.Outcar(filename=outcar_file)
             e_fermi = outcar.efermi
             
-            poscar = io.vasp.Poscar(filename=self.poscar)
+            poscar = io.vasp.Poscar(filename=poscar_file)
             structure = poscar.structure
             reciprocal_lattice = poscar.structure.reciprocal_lattice
 
-            parser = io.vasp.Procar(filename=self.procar,
+            parser = io.vasp.Procar(filename=procar_file,
                                     structure=structure,
                                     reciprocal_lattice=reciprocal_lattice,
                                     efermi=e_fermi,
@@ -822,41 +826,19 @@ class FermiHandler:
                 parser.ebs.ibz2fbz(outcar.rotations)
             # data = ProcarSelect(procarFile, deepCopy=True)
 
-        elif self.code == "abinit":
-            procarFile = ProcarParser()
-            procarFile.readFile(self.procar, False)
-            abinitFile = AbinitParser(abinit_output=self.abinit_output)
-
-            e_fermi = abinitFile.fermi
-        
-            reciprocal_lattice = abinitFile.reclat
-            parser = ProcarSelect(procarFile, deepCopy=True)
-
-            # Converting Ha to eV
-            parser.bands = 27.211396641308 * parser.bands
-
         elif self.code == "qe":
-            # procarFile = parser
             if self.dirname is None:
-                self.dirname = "bands"
+                self.dirname = "fermi"
             parser = io.qe.QEParser(scfIn_filename = "scf.in", dirname = self.dirname, bandsIn_filename = "bands.in", 
                                 pdosIn_filename = "pdos.in", kpdosIn_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml", 
                                 dos_interpolation_factor = None)
             reciprocal_lattice = parser.reciprocal_lattice
-            # data = ProcarSelect(procarFile, deepCopy=True)
 
             e_fermi = parser.efermi
 
             if self.apply_symmetry:
                 parser.ebs.ibz2fbz(parser.rotations)
 
-            # procarFile = QEFermiParser()
-            # reciprocal_lattice = procarFile.reclat
-            # data = ProcarSelect(procarFile, deepCopy=True)
-            # if fermi is None:
-            #     e_fermi = procarFile.efermi
-            # else:
-            #     e_fermi = fermi
 
         elif self.code == "lobster":
             procarFile = LobsterFermiParser()
@@ -865,17 +847,27 @@ class FermiHandler:
             e_fermi = 0
 
         elif self.code == "bxsf":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            infile = f"{self.dirname}{os.sep}in.bxsf"
             e_fermi = 0
-            parser = BxsfParser(infile= self.infile)
+            parser = BxsfParser(infile= infile)
             reciprocal_lattice = parser.reclat
             procarFile = None
 
         elif self.code == "frmsf":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            infile = f"{self.dirname}{os.sep}in.frmsrf"
+
             e_fermi = 0
-            parser = FrmsfParser(infile=self.infile)
+
+            parser = FrmsfParser(infile=infile)
             reciprocal_lattice = parser.rec_lattice
             bands = np.arange(len(parser.bands[0, :]))
             procarFile = None
+
+
 
         parser.ebs.bands += e_fermi
         return parser, reciprocal_lattice, e_fermi

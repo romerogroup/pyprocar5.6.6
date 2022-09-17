@@ -49,7 +49,6 @@ from .splash import welcome
 
 from .scripts import *
 from .io import *
-from .fermisurface3d import *
 from . import io
 from . import core
 from . import utils
