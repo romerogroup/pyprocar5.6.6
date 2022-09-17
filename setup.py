@@ -18,7 +18,7 @@ def write_version_py():
     """ Writes pyprocar/version.py.
     """
     base_path = Path(__file__).parent.absolute()
-    filename = base_path / 'pyprocar2' / 'version.py'
+    filename = base_path / 'pyprocar' / 'version.py'
     release_data = get_version_info() 
     version_info_string = "# THIS FILE IS GENERATED FROM PYPROCAR SETUP.PY."
     for key in release_data:
