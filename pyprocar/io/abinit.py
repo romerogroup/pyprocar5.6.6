@@ -369,20 +369,20 @@ class Procar(collections.abc.Mapping):
 
         self._read()
 
-        # if self.has_phase:
-        #     self.carray = self.spd_phase[:, :, :, :-1, 1:-1]
-        # self.ebs = ElectronicBandStructure(
-        #     kpoints=self.kpoints,
-        #     bands=self.bands,
-        #     projected=self._spd2projected(self.spd),
-        #     efermi=efermi,
-        #     kpath=kpath,
-        #     projected_phase=self._spd2projected(self.spd_phase),
-        #     labels=self.orbitalNames[:-1],
-        #     reciprocal_lattice=reciprocal_lattice,
-        #     interpolation_factor=interpolation_factor,
-        #     shifted_to_efermi=False,
-        # )
+        if self.has_phase:
+            self.carray = self.spd_phase[:, :, :, :-1, 1:-1]
+        self.ebs = ElectronicBandStructure(
+            kpoints=self.kpoints,
+            bands=self.bands,
+            projected=self._spd2projected(self.spd),
+            efermi=efermi,
+            kpath=kpath,
+            projected_phase=self._spd2projected(self.spd_phase),
+            labels=self.orbitalNames[:-1],
+            reciprocal_lattice=reciprocal_lattice,
+            interpolation_factor=interpolation_factor,
+            shifted_to_efermi=False,
+        )
 
     def _mergeparallel(self, inputfiles=None, outputfile=None, abinit_output=None):
         """This merges Procar files seperated between k-point ranges.
