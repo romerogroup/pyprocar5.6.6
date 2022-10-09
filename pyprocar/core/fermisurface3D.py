@@ -41,13 +41,10 @@ class FermiSurface3D(Surface):
         bands_to_keep: List[int]=None,
         spd: np.ndarray=None,
         spd_spin:np.ndarray=None,
-        calculate_fermi_velocity: bool=False,
-        calculate_fermi_speed: bool=False,
-        calculate_effective_mass: bool=False,
+
         fermi_shift: float=0.0,
         fermi_tolerance:float=0.1,
         interpolation_factor: int=1,
-        extended_zone_directions: List[List[int] or Tuple[int,int,int]]=None,
         colors: List[str] or List[Tuple[float,float,float]]=None,
         projection_accuracy: str="Normal",
         cmap: str="viridis",
@@ -77,15 +74,6 @@ class FermiSurface3D(Surface):
             orbitals and spin on each band 
         spd_spin :
             numpy array containing the information about spin projection of atoms
-        calculate_fermi_velocity : bool, optional (default False)
-            Boolean value to calculate fermi velocity vectors on the band surface
-            e.g. ``fermi_velocity_vector=True``
-        caclulate_fermi_speed : bool, optional (default False)
-            Boolean value to calculate magnitude of the fermi velocity on the band surface
-            e.g. ``fermi_velocity=True``
-        calculate_effective_mass : bool, optional (default False)
-            Boolean value to calculate the harmonic mean of the effective mass on the band surface
-            e.g. ``effective_mass=True``
         fermi_shift : float
             Value to shift fermi energy.
         fermi_tolerance : float = 0.1
@@ -132,10 +120,11 @@ class FermiSurface3D(Surface):
         self.interpolation_factor = interpolation_factor
         self.projection_accuracy = projection_accuracy
         self.spd_spin = spd_spin
-        self.calculate_fermi_velocity = calculate_fermi_velocity
-        self.calculate_fermi_speed = calculate_fermi_speed
-        self.calculate_effective_mass = calculate_effective_mass
         self.brillouin_zone = self._get_brilloin_zone(self.supercell)
+
+        self.cmap = cmap,
+        self.vmin = vmin
+        self.vmax = vmax
         
         # Finding bands with a fermi iso-surface. This reduces searching
         fullBandIndex = []
@@ -260,7 +249,7 @@ class FermiSurface3D(Surface):
             
         # Interpolation of spd vectorsto the surface
         if self.spd_spin[0] is not None and self.points is not None:
-            
+         
             vectors_array = []
             for iband in range(len(self.bands[0,:])):
                 vectors_array.append(self.spd_spin[:,iband])
@@ -269,51 +258,8 @@ class FermiSurface3D(Surface):
             
             self.create_vector_texture(vectors_array = vectors_array, vectors_name = "spin" )
 
-        # Interpolation of vectors to the surface
-        if self.calculate_fermi_velocity== True or self.calculate_fermi_speed == True or self.calculate_effective_mass == True:
-            self.calculate_first_and_second_derivative_energy()
-            
-            if self.calculate_fermi_velocity == True and self.points is not None:
-              
-                vectors_array = []
-                for band_name in self.first_and_second_derivative_energy_property_dict.keys():
-                    vectors_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["group_velocity_vector"])
-                    
-                vectors_array = np.array(vectors_array).T
-                vectors_array = np.swapaxes(vectors_array,axis1 = 1,axis2 = 2)
-    
-                self.create_vector_texture( vectors_array = vectors_array, vectors_name = "Fermi Velocity Vector"  )
 
-            if self.calculate_fermi_speed == True and self.points is not None:
-
-                scalars_array = []
-                for band_name in self.first_and_second_derivative_energy_property_dict.keys():
-                    scalars_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["group_velocity_magnitude"])
-                    
-                scalars_array = np.vstack(scalars_array).T 
-                
-                self.project_color(scalars_array = scalars_array, cmap=cmap, vmin=vmin, vmax=vmax,  scalar_name = "Fermi Speed")
-    
-            if self.calculate_effective_mass == True and self.points is not None:
-
-                scalars_array = []
-                for band_name in self.first_and_second_derivative_energy_property_dict.keys():
-                    scalars_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["effective_mass_list"])
-                scalars_array = np.vstack(scalars_array).T 
-                
-                self.project_color(scalars_array = scalars_array, cmap=cmap, vmin=vmin, vmax=vmax, scalar_name="Geometric Average Effective Mass")
         
-
-        # The following code  creates exteneded surfaces in a given direction
-        extended_surfaces = []
-        if extended_zone_directions is not None:
-            original_surface = copy.deepcopy(self) 
-            for direction in extended_zone_directions:
-                surface = copy.deepcopy(original_surface)
-                self += surface.translate(np.dot(direction, reciprocal_lattice))
-            #Clearing unneeded surface from memory
-            del original_surface
-            del surface
 
         # if sym == True:
         #     self.ibz2fbz()
@@ -322,7 +268,12 @@ class FermiSurface3D(Surface):
     def create_vector_texture(self,
                             vectors_array: np.ndarray, 
                             vectors_name: str="vector" ):
-
+        """_summary_
+        Method to map vector properties to the fermi surface.
+        Args:
+            vectors_array (np.ndarray): The vector array to map to the surface (nk, 3)
+            vectors_name (str, optional): The name to give the vector. Defaults to "vector".
+        """
         final_vectors_X = []
         final_vectors_Y = []
         final_vectors_Z = []
@@ -452,7 +403,9 @@ class FermiSurface3D(Surface):
         self.set_vectors(final_vectors_X, final_vectors_Y, final_vectors_Z,vectors_name = vectors_name)  
             
     def create_spin_texture(self):
-
+        """_summary_
+        Method to maap spin textures to the surface.
+        """
         if self.spd_spin is not None:
             XYZ_extended = self.XYZ.copy()
             vectors_extended_X = self.spd_spin[0].copy()
@@ -660,6 +613,10 @@ class FermiSurface3D(Surface):
               
     def calculate_first_and_second_derivative_energy_band(self, 
                                                         iband: int):
+
+        """_summary_
+        Helpper method to calculate the first and second derivative of a band
+        """
         def get_energy(kp_reduced: np.ndarray):
             return kp_reduced_to_energy[f'({kp_reduced[0]},{kp_reduced[1]},{kp_reduced[2]})']
         def get_cartesian_kp(kp_reduced: np.ndarray):
@@ -841,6 +798,9 @@ class FermiSurface3D(Surface):
                 effective_mass_list, gradient_list, gradient_list_cart)
     
     def calculate_first_and_second_derivative_energy(self):
+        """_summary_
+        Helper method which calculates the first and secoond derivative of all bands.
+        """
         
         self.first_and_second_derivative_energy_property_dict = {}
         for iband in range(len(self.bands[0,:])):
@@ -850,8 +810,66 @@ class FermiSurface3D(Surface):
                                                                                         "effective_mass_tensor_list":effective_mass_tensor_list,
                                                                                         "effective_mass_list":effective_mass_list}
                                                                 })
-            
 
+    def calculate_fermi_velocity(self):
+        """_summary_
+        Method to calculate the fermi velocity of the surface.
+        """
+        self.calculate_first_and_second_derivative_energy()
+
+        vectors_array = []
+        for band_name in self.first_and_second_derivative_energy_property_dict.keys():
+            vectors_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["group_velocity_vector"])
+            
+        vectors_array = np.array(vectors_array).T
+        vectors_array = np.swapaxes(vectors_array,axis1 = 1,axis2 = 2)
+
+        self.create_vector_texture( vectors_array = vectors_array, vectors_name = "Fermi Velocity Vector"  )  
+
+    def calculate_fermi_speed(self):
+        """_summary_
+        Method to calculate the fermi speed of the surface.
+        """
+        self.calculate_first_and_second_derivative_energy()
+
+        scalars_array = []
+        for band_name in self.first_and_second_derivative_energy_property_dict.keys():
+            scalars_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["group_velocity_magnitude"])
+            
+        scalars_array = np.vstack(scalars_array).T 
+        
+        
+        self.project_color(scalars_array = scalars_array, cmap=self.cmap, vmin=self.vmin, vmax=self.vmax,  scalar_name = "Fermi Speed")
+
+    def calculate_effective_mass(self):
+        """_summary_
+        Method to calculate the effective of the surface.
+        """
+        self.calculate_first_and_second_derivative_energy()
+
+        scalars_array = []
+        for band_name in self.first_and_second_derivative_energy_property_dict.keys():
+            scalars_array.append(self.first_and_second_derivative_energy_property_dict[band_name]["effective_mass_list"])
+        scalars_array = np.vstack(scalars_array).T 
+        
+        self.project_color(scalars_array = scalars_array, cmap=self.cmap, vmin=self.vmin, vmax=self.vmax, scalar_name="Geometric Average Effective Mass")
+
+    def extend_surface(self,  extended_zone_directions: List[List[int] or Tuple[int,int,int]]=None,):
+        """_summary_
+        Method to extend the surface in reciprocal lattice vecctor
+        Args:
+            extended_zone_directions (List[List[int] or Tuple[int,int,int]], optional): List of directions to extend the surface. Defaults to None.
+        """
+        # The following code  creates exteneded surfaces in a given direction
+        extended_surfaces = []
+        if extended_zone_directions is not None:
+            original_surface = copy.deepcopy(self) 
+            for direction in extended_zone_directions:
+                surface = copy.deepcopy(original_surface)
+                self += surface.translate(np.dot(direction, self.reciprocal_lattice))
+            #Clearing unneeded surface from memory
+            del original_surface
+            del surface
 
     def _get_brilloin_zone(self, 
                         supercell: List[int]):

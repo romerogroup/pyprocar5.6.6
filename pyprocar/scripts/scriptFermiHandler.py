@@ -77,7 +77,7 @@ class FermiHandler:
                         # plotting saving options
                         plot_brillouin_zone:bool=True,
                         arrow_color: List[str] or List[Tuple[float,float,float]]=None,
-                        arrow_size: float=0.015,
+                        arrow_size: float=0.1,
                         colors: List[str] or List[Tuple[float,float,float]]=None,
                         cmap:str="jet",
                         vmin:float=0,
@@ -120,9 +120,6 @@ class FermiHandler:
                                         spd=spd,
                                         spd_spin=spd_spin,
                                         colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
                                         fermi=self.e_fermi,
                                         fermi_shift = fermi_shift,
                                         fermi_tolerance=fermi_tolerance,
@@ -131,10 +128,21 @@ class FermiHandler:
                                         projection_accuracy=projection_accuracy,
                                         supercell=supercell,
                                         cmap=cmap,
-                                        vmin = vmin,
+                                        vmin=vmin,
                                         vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
                                     )
+
+
+        if calculate_fermi_speed:
+            fermi_surface3D.calculate_fermi_speed()
+        elif calculate_fermi_velocity:
+            fermi_surface3D.calculate_fermi_velocity()
+        elif calculate_effective_mass:
+            fermi_surface3D.calculate_effective_mass()
+
+        if extended_zone_directions:
+            fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
+
 
         ################################################################
         # Initialize the Plotter
@@ -201,11 +209,11 @@ class FermiHandler:
         if save_gif is not None:
             path = plotter.generate_orbital_path(n_points=36)
             plotter.open_gif(save_gif)
-            plotter.orbit_on_path(path) 
+            plotter.orbit_on_path(path, write_frames=True, viewup=[0, 0, 1], step=0.05)
         if save_mp4:
             path = plotter.generate_orbital_path(n_points=36)
             plotter.open_movie(save_mp4)
-            plotter.orbit_on_path(path) 
+            plotter.orbit_on_path(path, write_frames=True, viewup=[0, 0, 1], step=0.05)
 
         if save_3d:
             plotter.save_meshio(save_3d,  fermi_surface3D)
@@ -333,9 +341,6 @@ class FermiHandler:
                                         spd=spd,
                                         spd_spin=spd_spin,
                                         colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
                                         fermi=e_value,
                                         fermi_shift = fermi_shift,
                                         fermi_tolerance=fermi_tolerance,
@@ -346,8 +351,16 @@ class FermiHandler:
                                         cmap=cmap,
                                         vmin = vmin,
                                         vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
                                     )
+            if calculate_fermi_speed:
+                fermi_surface3D.calculate_fermi_speed()
+            elif calculate_fermi_velocity:
+                fermi_surface3D.calculate_fermi_velocity()
+            elif calculate_effective_mass:
+                fermi_surface3D.calculate_effective_mass()
+
+            if extended_zone_directions:
+                fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
             brillouin_zone = fermi_surface3D.brillouin_zone
             e_surfaces.append(fermi_surface3D)
         
@@ -454,9 +467,6 @@ class FermiHandler:
                                         spd=spd,
                                         spd_spin=spd_spin,
                                         colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
                                         fermi=e_value,
                                         fermi_shift = fermi_shift,
                                         fermi_tolerance=fermi_tolerance,
@@ -467,8 +477,16 @@ class FermiHandler:
                                         cmap=cmap,
                                         vmin = vmin,
                                         vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
                                     )
+            if calculate_fermi_speed:
+                fermi_surface3D.calculate_fermi_speed()
+            elif calculate_fermi_velocity:
+                fermi_surface3D.calculate_fermi_velocity()
+            elif calculate_effective_mass:
+                fermi_surface3D.calculate_effective_mass()
+
+            if extended_zone_directions:
+                fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
             brillouin_zone = fermi_surface3D.brillouin_zone
             e_surfaces.append(fermi_surface3D)
 
@@ -625,9 +643,6 @@ class FermiHandler:
                                         spd=spd,
                                         spd_spin=spd_spin,
                                         colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
                                         fermi=self.e_fermi,
                                         fermi_shift = fermi_shift,
                                         fermi_tolerance=fermi_tolerance,
@@ -638,8 +653,16 @@ class FermiHandler:
                                         cmap=cmap,
                                         vmin = vmin,
                                         vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
                                     )
+        if calculate_fermi_speed:
+            fermi_surface3D.calculate_fermi_speed()
+        elif calculate_fermi_velocity:
+            fermi_surface3D.calculate_fermi_velocity()
+        elif calculate_effective_mass:
+            fermi_surface3D.calculate_effective_mass()
+
+        if extended_zone_directions:
+            fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
 
         ################################################################
         # Initialize the plotter
@@ -758,9 +781,6 @@ class FermiHandler:
                                         spd=spd,
                                         spd_spin=spd_spin,
                                         colors = None,
-                                        calculate_fermi_speed = False,
-                                        calculate_fermi_velocity = False,
-                                        calculate_effective_mass = False,
                                         fermi=e_value,
                                         fermi_shift = fermi_shift,
                                         fermi_tolerance=fermi_tolerance,
@@ -771,8 +791,8 @@ class FermiHandler:
                                         cmap=cmap,
                                         vmin=0,
                                         vmax=1,
-                                        extended_zone_directions = extended_zone_directions,
                                     )
+
             brillouin_zone = fermi_surface3D.brillouin_zone
             surface_areas.append(fermi_surface3D.fermi_surface_area)
             e_surfaces.append(fermi_surface3D)
