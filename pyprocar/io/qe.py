@@ -115,6 +115,7 @@ class QEParser():
         if os.path.exists(f"{dirname}{atomic_proj_xml}"):
             atmProj_tree = ET.parse(f"{dirname}{atomic_proj_xml}" )
             self.atm_proj_root = atmProj_tree.getroot()
+
             self.parse_atomic_projections()
 
         if os.path.exists(f"{dirname}{pdosIn_filename}"):
@@ -758,55 +759,49 @@ class QEParser():
             # )
  
     def parse_atomic_projections(self):
-        nbnd = int(self.atm_proj_root.findall(".//HEADER/NUMBER_OF_BANDS")[0].text)
-        nk = int(self.atm_proj_root.findall(".//HEADER/NUMBER_OF_K-POINTS")[0].text)
-        nwfc = int(self.atm_proj_root.findall(".//HEADER/NUMBER_OF_ATOMIC_WFC")[0].text)
-        nspin = int(self.atm_proj_root.findall(".//HEADER/NUMBER_OF_SPIN_COMPONENTS")[0].text)
 
-        # self.complex_projections  = np.zeros(shape = (nk, nwfc, nbnd))
-        # self.real_projections  = np.zeros(shape = (nk, nwfc, nbnd))
-        
+        root_header = self.atm_proj_root.findall(".//HEADER")[0]
+
+        nbnd = int(root_header.get("NUMBER_OF_BANDS"))
+        nk = int(root_header.get("NUMBER_OF_K-POINTS"))
+        nwfc = int(root_header.get("NUMBER_OF_ATOMIC_WFC"))
+        nspin = int(root_header.get("NUMBER_OF_SPIN_COMPONENTS"))
+
         self.spd_phase = np.zeros(
             shape=(
                self.spd.shape
             ),
             dtype=np.complex_,
         )
+        ik = -1
+        for ieigenstate, eigenstates_element in enumerate(self.atm_proj_root.findall(".//EIGENSTATES")[0]):
+            # print(eigenstates_element.tag)
+            if eigenstates_element.tag == 'K-POINT':
 
-        for ik, kpoints_element in enumerate(self.atm_proj_root.findall(".//PROJECTIONS")[0]):
-            
-            if self.nspin == 1:
-                for iwfc, wfc_element in enumerate(kpoints_element):
-                    
-                    iatm = self.wfc_mapping[f"wfc_{iwfc+1}"]["atom"]
+                # sets ik back to zero for other spin channel
+                if ik==nk-1:
+                    ik = 0
+                else:
+                    ik+=1
+
+            if eigenstates_element.tag == 'PROJS':
+                for iwfc, wfc_element in enumerate(eigenstates_element):
+                    # print(wfc_element.tag)
                     iorb = self.wfc_mapping[f"wfc_{iwfc+1}"]["orbital"]
-                    
-                    projections = wfc_element.text.split("\n")[1:nbnd].pop(-1)
-                    for iband, band_projection in enumerate(wfc_element.text.split("\n")[1:-1]):
-                        # self.real_projections[ik,iwfc,iband] = float(band_projection.split(",")[0])
-                        # self.complex_projections[ik,iwfc,iband] = float(band_projection.split(",")[1])
-                        
-                        
-                        real = float(band_projection.split(",")[0])
-                        imag = float(band_projection.split(",")[1])
-                        self.spd_phase[ik,iband,0,iatm - 1,iorb + 1] = complex(real , imag)
+                    iatm = self.wfc_mapping[f"wfc_{iwfc+1}"]["atom"]
+                    ispin = int(wfc_element.get('spin'))-1
 
-            elif self.nspin ==2:
-                
-                for ispin, spin_element in enumerate(kpoints_element):
-                    for iwfc, wfc_element in enumerate(spin_element):
+
+                    projections = wfc_element.text.split("\n")[1:-1]
+                    
+
+                    for iband, band_projection in enumerate(projections):
                         
-                        iatm = self.wfc_mapping[f"wfc_{iwfc+1}"]["atom"]
-                        iorb = self.wfc_mapping[f"wfc_{iwfc+1}"]["orbital"]
-                        
-                        projections = wfc_element.text.split("\n")[1:nbnd].pop(-1)
-                        for iband, band_projection in enumerate(wfc_element.text.split("\n")[1:-1]):
-                            # self.real_projections[ik,iwfc,iband] = float(band_projection.split(",")[0])
-                            # self.complex_projections[ik,iwfc,iband] = float(band_projection.split(",")[1])
-                            
-                            real = float(band_projection.split(",")[0])
-                            imag = float(band_projection.split(",")[1])
-                            self.spd_phase[ik,iband,ispin,iatm - 1,iorb + 1] = complex(real , imag)
+
+                        real = float(band_projection.split()[0])
+                        imag = float(band_projection.split()[1])
+                        self.spd_phase[ik,iband,ispin,iatm - 1,iorb + 1] = complex(real , imag)
+
                                
     def parse_structure(self):
         self.nspecies = len(self.root.findall(".//output/atomic_species")[0])

@@ -94,11 +94,16 @@ class BrillouinZone(Surface):
         # for ix in range(3):
         # self.reciprocal[:,ix]*=supercell[ix]
         verts, faces = self.wigner_seitz()
+
+        
         new_faces = []
         for iface in faces:
             new_faces.append(len(iface))
             for ivert in iface:
                 new_faces.append(ivert)
+
+        
+
         super().__init__(verts=verts, faces = new_faces )
         
         
@@ -143,16 +148,11 @@ class BrillouinZone(Surface):
         return np.array(verts,dtype = float), faces
 
     def _fix_normals_direction(self,n_faces):
-        # directions = np.zeros_like(self.centers)
-        
-        for iface in range(n_faces):
-            center = self.centers[iface]
-            n1 = center / np.linalg.norm(center)
-            n2 = self.face_normals[iface]
+        center = self.centers[0]
+        n1 = center / np.linalg.norm(center)
+        n2 = self.face_normals[0]
+        correction = np.sign(np.dot(n1, n2))
+        if correction == -1:
+            self.compute_normals(flip_normals=True, inplace=True)
 
-            correction = np.sign(np.dot(n1, n2))
-            self.face_normals[iface] = self.face_normals[iface] * correction
-            self.face_normals[iface] = (
-                self.face_normals[iface] * correction
-            )
-            # self.trimesh_obj.face_normals[iface]*=correction
+    
