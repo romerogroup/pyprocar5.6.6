@@ -120,6 +120,7 @@ class FermiSurface3D(Surface):
             self.bands = self.bands[:,bands_to_keep]
 
         self.reciprocal_lattice = reciprocal_lattice
+
         self.supercell = np.array(supercell)
         self.fermi = fermi + fermi_shift
         self.interpolation_factor = interpolation_factor
@@ -137,7 +138,6 @@ class FermiSurface3D(Surface):
         reducedBandIndex = []
         for iband in range(len(self.bands[0,:])):
             fermi_surface_test = len(np.where(np.logical_and(self.bands[:,iband]>=self.fermi-fermi_tolerance, self.bands[:,iband]<=self.fermi+fermi_tolerance))[0])
-            
             if fermi_surface_test != 0:
                 fullBandIndex.append(iband)
         if len(fullBandIndex)==0:
@@ -665,7 +665,7 @@ class FermiSurface3D(Surface):
 
     def calculate_effective_mass(self):
         """_summary_
-        Method to calculate the effective of the surface.
+        Method to calculate the effective mass of the surface.
         """
         self.calculate_first_and_second_derivative_energy()
 
@@ -694,7 +694,7 @@ class FermiSurface3D(Surface):
 
     def project_spin_texture_atomic_projections(self):
         """_summary_
-        Method to calculate the effective of the surface.
+        Method to calculate spin texture effective of the surface.
         """
         if self.spd_spin[0] is not None:
             self.spd_spin = self.spd_spin[:,self.fullBandIndex]

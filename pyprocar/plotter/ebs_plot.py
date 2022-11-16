@@ -110,7 +110,8 @@ class EBSPlot:
         None.
 
         """
-
+        print(self.ebs.bands.shape)
+        print(self.x.shape)
         for ispin in range(self.ebs.bands.shape[2]):
             for iband in range(self.ebs.nbands):
                 handle = self.ax.plot(

@@ -989,7 +989,32 @@ class FermiHandler:
             procarFile = None
 
 
+        elif self.code == "abinit":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            outfile = f"{self.dirname}{os.sep}abinit.out"
 
+            # e_fermi = 0
+
+            output = io.abinit.Output(abinit_output=outfile)
+            # e_fermi = 0
+            e_fermi = output.fermi
+            
+            # poscar = io.vasp.Poscar(filename=poscar_file)
+            structure = output.structure
+            reciprocal_lattice = output.structure.reciprocal_lattice
+
+            parser = io.abinit.Procar(
+                                filename=self.dirname,
+                                abinit_output=outfile,
+                                structure=output.structure,
+                                reciprocal_lattice=output.reclat,
+                                kpath=None,
+                                efermi=output.fermi,
+                            )
+
+            parser.ebs.bands += e_fermi
+            
         parser.ebs.bands += e_fermi
         return parser, reciprocal_lattice, e_fermi
 
@@ -1016,16 +1041,16 @@ class FermiHandler:
         print(f"Bands near the fermi energy : {self.band_near_fermi}")
 
         if spins is None:
-            if np.all(self.parser.ebs.bands[:,:,1]==0):
+            if self.parser.ebs.bands.shape[2] == 1 or np.all(self.parser.ebs.bands[:,:,1]==0):
                 spins = [0]
             else:
                 spins = [0,1]
         
         spd = []
         if mode == "parametric":
-            if orbitals is None and self.parser.ebs.projected:
+            if orbitals is None and self.parser.ebs.projected is not None:
                 orbitals = np.arange(self.parser.ebs.norbitals, dtype=int)
-            if atoms is None and self.parser.ebs.projected:
+            if atoms is None and self.parser.ebs.projected is not None:
                 atoms = np.arange(self.parser.ebs.natoms, dtype=int)
             projected = self.parser.ebs.ebs_sum(spins=spins , atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
             # projected = projected[:,:,spins[0]]
@@ -1103,7 +1128,7 @@ class FermiHandler:
                 vector_name=None
             else:
                 print("Please select a property")
-        else:
+        elif mode == 'spin_texture':
             text = "Spin Texture"
             use_rgba = False
             scalars = "spin"
