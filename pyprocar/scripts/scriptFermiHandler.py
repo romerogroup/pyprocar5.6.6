@@ -326,6 +326,7 @@ class FermiHandler:
             
             if options_dict['scalars'] == "spin" or options_dict['scalars'] == "Fermi Velocity Vector_magnitude":
                 if arrow_color is None:
+                    
                     arrows=e_surfaces[closest_idx].glyph(
                                                         orient=options_dict['vector_name'], 
                                                         scale=False ,
@@ -335,9 +336,7 @@ class FermiHandler:
                     arrow_actor = [value for key, value in plotter.renderer.actors.items() if 'PolyData' in key]
                     if len(arrow_actor) != 0:
                         plotter.remove_actor(arrow_actor[0])
-                    
                     plotter.add_mesh(arrows, 
-                                    scalars = options_dict['scalars'],
                                     cmap=cmap,
                                     show_scalar_bar=False)
                 else:
@@ -418,10 +417,9 @@ class FermiHandler:
                 else:
                     total_surface += surface
 
-            
             e_surfaces.append(total_surface)
-        
-  
+
+
         ################################################################
         # Initialize the Plotter
         ################################################################
@@ -1080,10 +1078,15 @@ class FermiHandler:
             ebsY.projected = ebsY.projected[:,:,[1]]
             ebsZ.projected = ebsZ.projected[:,:,[2]]
 
+
             for iband in bands_to_keep:
                 spd_spin.append(
                     [ebsX.projected[:, iband], ebsY.projected[:, iband], ebsZ.projected[:, iband]]
                 )
+
+            spd_spin = np.array(spd_spin)[:,:,:,0]
+            spd_spin = np.swapaxes(spd_spin, 0, 1)
+            spd_spin = np.swapaxes(spd_spin, 0, 2)
         else:
             for iband in bands_to_keep:
                 spd_spin.append(None)

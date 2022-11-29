@@ -218,9 +218,11 @@ def bandsplot(
             orbitals = []
             for iorb in orbital_str:
                 orbitals = np.append(orbitals, orbital_names[iorb]).astype(np.int)
+
+
         weights = ebs_plot.ebs.ebs_sum(
-            atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins
-        )
+            atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins)
+            
         
         if settings.ebs.weighted_color:
             color_weights = weights
@@ -240,6 +242,7 @@ def bandsplot(
                 width_mask=width_mask,
                 vmin=vmin,
                 vmax=vmax,
+                spins=spins
 )
         elif mode == "scatter":
             ebs_plot.plot_scatter(

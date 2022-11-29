@@ -1,9 +1,12 @@
-import numpy as np
+import sys
+from typing import List
 import re
+
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import matplotlib
-import sys
+
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
 from ..utils.defaults import settings
 
@@ -112,7 +115,7 @@ class EBSPlot:
         """
         print(self.ebs.bands.shape)
         print(self.x.shape)
-        for ispin in range(self.ebs.bands.shape[2]):
+        for ispin in self.spins:
             for iband in range(self.ebs.nbands):
                 handle = self.ax.plot(
                     self.x, self.ebs.bands[:, iband, ispin], color=settings.ebs.color[ispin], alpha=settings.ebs.opacity[
@@ -321,6 +324,7 @@ class EBSPlot:
                 cb.ax.tick_params(labelsize=20)
 
     def set_xticks(self, tick_positions=None, tick_names=None, color="black"):
+
         if self.kpath is not None:
             if tick_positions is None:
                 tick_positions = self.kpath.tick_positions
@@ -328,6 +332,7 @@ class EBSPlot:
                 tick_names = self.kpath.tick_names
             for ipos in tick_positions:
                 self.ax.axvline(self.x[ipos], color=color)
+
             self.ax.set_xticks(self.x[tick_positions])
             self.ax.set_xticklabels(tick_names)
             self.ax.tick_params(

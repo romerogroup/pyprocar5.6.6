@@ -132,6 +132,7 @@ class ElectronicBandStructure:
     def kpoints_reduced(self):
         return self.kpoints
 
+    
     def ebs_sum(self, 
                 atoms:List[int]=None, 
                 principal_q_numbers:List[int]=[-1], 
@@ -153,7 +154,6 @@ class ElectronicBandStructure:
         ret = np.sum(ret[:, :, :, principal_q_numbers, :], axis=-2)
         # sum over atoms
         ret = np.sum(ret[:, :, atoms, :], axis=-2)
-
         # sum over spins only in non collinear and reshaping for consistency (nkpoints, nbands, nspins)
         # in non-mag, non-colin nspin=1, in colin nspin=2
         if self.is_non_collinear and sum_noncolinear:

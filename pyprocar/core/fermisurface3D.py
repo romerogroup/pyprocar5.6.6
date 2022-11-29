@@ -127,6 +127,7 @@ class FermiSurface3D(Surface):
         self.projection_accuracy = projection_accuracy
         self.spd = spd
         self.spd_spin = spd_spin
+
         self.brillouin_zone = self._get_brilloin_zone(self.supercell)
 
         self.cmap = cmap
@@ -246,7 +247,6 @@ class FermiSurface3D(Surface):
         final_vectors_X = []
         final_vectors_Y = []
         final_vectors_Z = []
-
         for iband, isosurface in enumerate(self.isosurfaces):
             XYZ_extended = self.XYZ.copy()
             vectors_extended_X = vectors_array[:,iband,0].copy()
@@ -483,7 +483,7 @@ class FermiSurface3D(Surface):
                                 np.unique(self.XYZ[:,1]),
                                 np.unique(self.XYZ[:,2]), indexing = 'ij')
         
-        
+        print(self.bands.shape)
         kp_reduced_to_energy = {f'({key[0]},{key[1]},{key[2]})':value for (key,value) in zip(self.XYZ,self.bands[:,iband])}
         kp_reduced_to_kp_cart = {f'({key[0]},{key[1]},{key[2]})':value for (key,value) in zip(self.XYZ,kpoints_cart)}
         kp_reduced_to_mesh_index = {f'({kp[0]},{kp[1]},{kp[2]})': np.argwhere((mesh_list[0]==kp[0]) & 
@@ -697,14 +697,15 @@ class FermiSurface3D(Surface):
         Method to calculate spin texture effective of the surface.
         """
         if self.spd_spin[0] is not None:
-            self.spd_spin = self.spd_spin[:,self.fullBandIndex]
-
-        vectors_array = []
-        for iband in range(len(self.bands[0,:])):
-            vectors_array.append(self.spd_spin[:,iband])
-        vectors_array = np.array(vectors_array).T
-        vectors_array = np.swapaxes(vectors_array,axis1 = 1,axis2 = 2)
-        
+            self.spd_spin = self.spd_spin[:,self.fullBandIndex,:]
+        vectors_array = self.spd_spin
+        # print(vectors_array.shape)
+        # vectors_array = []
+        # for iband in range(len(self.bands[0,:])):
+        #     vectors_array.append(self.spd_spin[:,iband])
+        # vectors_array = np.array(vectors_array).T
+        # vectors_array = np.swapaxes(vectors_array,axis1 = 1,axis2 = 2)
+        # print(vectors_array.shape)
         self.create_vector_texture(vectors_array = vectors_array, vectors_name = "spin" )
    
     def extend_surface(self,  extended_zone_directions: List[List[int] or Tuple[int,int,int]]=None,):

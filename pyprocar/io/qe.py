@@ -26,11 +26,19 @@ class QEParser():
         else:
             dirname = ""
             
-        rf = open(f"{dirname}{scfIn_filename}", "r")
-        self.scfIn = rf.read()
-        rf.close()
+        with open(f"{dirname}{scfIn_filename}", "r") as f:
+            self.scfIn = f.read()
 
-        xml_filename =  re.findall("prefix\s*=\s*'(.*)'", self.scfIn)[0] + ".xml"
+        outdir = re.findall("outdir\s*=\s*'\S*?([A-Za-z]*)'", self.scfIn)[0]
+        prefix = re.findall("prefix\s*=\s*'(.*)'", self.scfIn)[0]
+        xml_filename =  prefix + ".xml"
+        
+        if os.path.exists(f"{dirname}{outdir}"):
+            xml_file = f"{dirname}{outdir}{os.sep}{xml_filename}"
+            atomic_proj_xml = f"{outdir}{os.sep}{prefix}.save{os.sep}atomic_proj.xml"
+        else:
+            xml_file = f"{dirname}{xml_filename}"
+            atomic_proj_xml = "atomic_proj.xml"
 
         tree = ET.parse(f"{dirname}{xml_filename}")
 
@@ -91,31 +99,19 @@ class QEParser():
         self.parse_band_structure_tag()
         self.parse_symmetries()
         
-        # Detmines if this is a kresolved calculation or not
-        
-        
-        if os.path.exists(f"{dirname}{kpdosIn_filename}"):
-            rf = open(f"{dirname}{kpdosIn_filename}", "r")
-            self.kpdosIn = rf.read()
-            rf.close()
-            
-            self.pdos_prefix = re.findall("filpdos\s*=\s*'(.*)'", self.kpdosIn)[0]
-            self.proj_prefix = re.findall("filproj\s*=\s*'(.*)'", self.kpdosIn)[0]
             
         if os.path.exists(f"{dirname}{pdosIn_filename}"):
-            rf = open(f"{dirname}{pdosIn_filename}", "r")
-            self.pdosIn = rf.read()
-            rf.close()
-            
-            self.pdos_prefix = re.findall("filpdos\s*=\s*'(.*)'", self.pdosIn)[0]
-            self.proj_prefix = re.findall("filproj\s*=\s*'(.*)'", self.pdosIn)[0]
+            with open(f"{dirname}{pdosIn_filename}", "r") as f:
+                pdosIn = f.read()
+
+            self.pdos_prefix = re.findall("filpdos\s*=\s*'(.*)'", pdosIn)[0]
+            self.proj_prefix = re.findall("filproj\s*=\s*'(.*)'", pdosIn)[0]
             
         #Parsing spd array and spd phase arrays
-        self.parse_projections()
         if os.path.exists(f"{dirname}{atomic_proj_xml}"):
+            self.parse_wfc_mapping()
             atmProj_tree = ET.parse(f"{dirname}{atomic_proj_xml}" )
             self.atm_proj_root = atmProj_tree.getroot()
-
             self.parse_atomic_projections()
 
         if os.path.exists(f"{dirname}{pdosIn_filename}"):
@@ -126,16 +122,12 @@ class QEParser():
         self.knames = None
         self.kpath = None
         if self.root.findall(".//input/control_variables/calculation")[0].text == "bands":
-            # print("This xml is a bands calculation")
             self.isBandsCalc = True
-            rf = open(f"{dirname}{bandsIn_filename}", "r")
-            self.bandsIn = rf.read()
-            rf.close()
+            with open(f"{dirname}{bandsIn_filename}", "r") as f:
+                self.bandsIn = f.read()
             self.getKpointLabels()
 
-
         if self.root.findall(".//input/control_variables/calculation")[0].text == "nscf":
-            # print("This xml is a nscf calculation")
             self.isDosFermiCalc = True
 
         self.ebs = ElectronicBandStructure(
@@ -151,14 +143,6 @@ class QEParser():
 
                             )
 
-        
-       
-        
-        
-        
-        
-        
-        
     @property
     def species(self):
         """
@@ -633,8 +617,6 @@ class QEParser():
                 self.special_kpoints[itick,1,:] = self.kpoints[self.kticks[itick+1]]
                 self.modified_knames.append([self.knames[itick], self.knames[itick+1] ])
 
-
-        
         has_time_reversal = True
         self.kpath = KPath(
                         knames=self.modified_knames,
@@ -644,129 +626,44 @@ class QEParser():
                         has_time_reversal=has_time_reversal,
                     )
                     
-    def parse_projections(self):
+    def parse_wfc_mapping(self):
+        with open(f"{self.dirname}{os.sep}kpdos.out") as f:
+            data =  f.read()
 
-        rf = open(f"{self.dirname}{self.proj_prefix}.projwfc_up", "r")
-        self.projections_file = [rf.readlines()]
-        rf.close()
-        if self.nspin == 2:
-            rf = open(f"{self.dirname}{self.proj_prefix}.projwfc_down", "r")
-            self.projections_file.append( rf.readlines())
-            rf.close()
-            
+        raw_wfc  =  re.findall('(?<=read\sfrom\spseudopotential\sfiles).*\n\n([\S\s]*?)\n\n(?=\sk\s=)', data)[0]
+        wfc_list = raw_wfc.split('\n')
+
+        self.wfc_mapping={}
+        for i, wfc in enumerate(wfc_list):
+
+            iwfc  =  int(re.findall('(?<=state\s#)\s*(\d*)',wfc)[0])
+            iatm  =  int(re.findall('(?<=atom)\s*(\d*)',wfc)[0])
+
+            l_orbital_type_index = int(re.findall('(?<=l=)\s*(\d*)',wfc)[0])
+            m_orbital_type_index =  int(re.findall('(?<=m=)\s*(\d*)',wfc)[0])
+
+            tmp_orb_dict = {"l" : l_orbital_type_index , "m" : m_orbital_type_index}
+            iorb = 0
+            for iorbital, orb in enumerate(self.orbitals):
+                if tmp_orb_dict == orb:
+                    iorb = iorbital
         
-        natm = int(self.projections_file[0][1].split()[-2])
-        ntyp = int(self.projections_file[0][1].split()[-1])
-        
-        ibrav = int(self.projections_file[0][2].split()[0])
-        if ibrav == 0:
-            n_header_lines = 7
-        else:
-            n_header_lines = 4
-        
-        nwfc = int(self.projections_file[0][natm + ntyp+n_header_lines].split()[0])
-        nk = int(self.projections_file[0][natm + ntyp+n_header_lines].split()[1])
-        nbnd = int(self.projections_file[0][natm + ntyp+n_header_lines].split()[2])
-        norb = len(self.orbitals) 
-        
-        # print(natm)
-        # print(norb)
-        # print(nbnd)
-        # print(nk)
-        # print(nwfc)
-        # print(ntyp)
+            self.wfc_mapping.update({f"wfc_{iwfc}":{"orbital" : iorb, "atom" : iatm}})
 
-        # # In natm "+1" for total. In norb "+2" for total
-
-        self.spd = np.zeros(shape = (nk,self.nbnd , self.nspin ,natm+1,norb + 2,))
-        
-
-        self.wfc_mapping = {}
-        for ispin, projection_file in enumerate(self.projections_file):
-            
-            nspin = 2
-            starting_line_num = natm + ntyp + n_header_lines + 2
-            
-            lineCounter = starting_line_num
-            for iwfc in range(nwfc):
-                if iwfc != 0:
-                    lineCounter += 1
-                iatm = int(projection_file[lineCounter].split()[1])
-                atm = projection_file[lineCounter].split()[2]
-                l_orbital_type_index = int(projection_file[lineCounter].split()[5])
-                m_orbital_type_index = int(projection_file[lineCounter].split()[6])
-                tmp_orb_dict = {"l" : l_orbital_type_index , "m" : m_orbital_type_index}
-                iorb = 0
-                for iorbital, orb in enumerate(self.orbitals):
-                    if tmp_orb_dict == orb:
-                        iorb = iorbital
-                lOrbtial = projection_file[lineCounter].split()[3][1].lower()
-                
-                
-                
-                self.wfc_mapping.update({f"wfc_{iwfc+1}":{"orbital" : iorb, "atom" : iatm}})
-                
-                
-                # self.wfc_filenames.append(f"{self.dirname}/{self.pdos_prefix}.pdos_atm#{iatm}({atm})_wfc#{lOrbtial}({lOrbtial})")
-
-                for ik in range(nk):
-                    for iband in range(nbnd):
-                        lineCounter += 1
-                        # print()
-                        if ispin ==0:
-                            self.spd[ik,iband,0,iatm - 1,iorb + 1 ] = float(projection_file[lineCounter].split()[2])
-                        elif ispin ==1:
-                            self.spd[ik,iband,1,iatm - 1,iorb + 1 ] = float(projection_file[lineCounter].split()[2])
-                        
-        for ions in range(self.ionsCount):
-            self.spd[:, :, :, ions, 0] = ions + 1
-
-        # The following fills the totals for the spd array
-        self.spd[:, :, :, :, -1] = np.sum(self.spd[:, :, :, :, 1:-1], axis=4)
-        self.spd[:, :, :, -1, :] = np.sum(self.spd[:, :, :, :-1, :], axis=3)
-        self.spd[:, :, :, -1, 0] = 0
-
-        
-        # if self.nspin == 2:
-        #     print("\nQuantum Espresso colinear spin calculation detected.\n")
-        #     self.spd2 = np.zeros(
-        #         shape=(
-        #             self.kpointsCount,
-        #             self.bandsCount *2,
-        #             self.nspin,
-        #             self.ionsCount + 1,
-        #             len(self.orbitals) + 2,
-        #         )
-        #     )
-
-        #     # spin up block for spin=0
-        #     self.spd2[:, : self.bandsCount, 0, :, :] = self.spd[:, :, 0, :, :]
-
-        #     # spin down block for spin=0
-        #     self.spd2[:, self.bandsCount :, 0, :, :] = self.spd[:, :, 1, :, :]
-
-        #     # spin up block for spin=1
-        #     self.spd2[:, : self.bandsCount, 1, :, :] = self.spd[:, :, 0, :, :]
-
-        #     # spin down block for spin=1
-        #     self.spd2[:, self.bandsCount :, 1, :, :] = -1 * self.spd[:, :, 1, :, :]
-
-        #     self.spd = self.spd2
-
-            # Reshaping bands array to inlcude all bands (spin up and down)
-            # self.bands = self.bands.reshape(
-            #     self.kpointsCount, self.bandsCount * 2, order="F"
-            # )
- 
     def parse_atomic_projections(self):
-
         root_header = self.atm_proj_root.findall(".//HEADER")[0]
 
         nbnd = int(root_header.get("NUMBER_OF_BANDS"))
         nk = int(root_header.get("NUMBER_OF_K-POINTS"))
         nwfc = int(root_header.get("NUMBER_OF_ATOMIC_WFC"))
-        nspin = int(root_header.get("NUMBER_OF_SPIN_COMPONENTS"))
+        if self.non_colinear:
+            nspin = 4
+        else:
+            nspin = int(root_header.get("NUMBER_OF_SPIN_COMPONENTS"))
+        norb = len(self.orbitals) 
+        natm = len(self.species)
 
+        self.spd = np.zeros(shape = (nk, self.nbnd , nspin ,natm+1,norb + 2,))
         self.spd_phase = np.zeros(
             shape=(
                self.spd.shape
@@ -780,27 +677,38 @@ class QEParser():
 
                 # sets ik back to zero for other spin channel
                 if ik==nk-1:
-                    ik = 0
+                    ik=0
                 else:
                     ik+=1
-
+                
             if eigenstates_element.tag == 'PROJS':
-                for iwfc, wfc_element in enumerate(eigenstates_element):
-                    # print(wfc_element.tag)
-                    iorb = self.wfc_mapping[f"wfc_{iwfc+1}"]["orbital"]
-                    iatm = self.wfc_mapping[f"wfc_{iwfc+1}"]["atom"]
-                    ispin = int(wfc_element.get('spin'))-1
+                
+                for i, projs_element in enumerate(eigenstates_element):
+                    iwfc = int(projs_element.get('index'))
+                    iorb = self.wfc_mapping[f"wfc_{iwfc}"]["orbital"]
+                    iatm = self.wfc_mapping[f"wfc_{iwfc}"]["atom"]
+                    if projs_element.tag == "ATOMIC_WFC":
+                        ispin = int(projs_element.get('spin'))-1
+                    if projs_element.tag == "ATOMIC_SIGMA_PHI":
+                        ispin = int(projs_element.get('ipol'))
 
-
-                    projections = wfc_element.text.split("\n")[1:-1]
-                    
-
+                    projections = projs_element.text.split("\n")[1:-1]
                     for iband, band_projection in enumerate(projections):
-                        
-
                         real = float(band_projection.split()[0])
                         imag = float(band_projection.split()[1])
+                        comp = complex(real , imag)
+                        comp_squared = np.absolute(comp)**2
+
                         self.spd_phase[ik,iband,ispin,iatm - 1,iorb + 1] = complex(real , imag)
+                        self.spd[ik,iband,ispin,iatm - 1,iorb + 1] = comp_squared
+                        
+        for ions in range(self.ionsCount):
+            self.spd[:, :, :, ions, 0] = ions + 1
+
+        # The following fills the totals for the spd array
+        self.spd[:, :, :, :, -1] = np.sum(self.spd[:, :, :, :, 1:-1], axis=4)
+        self.spd[:, :, :, -1, :] = np.sum(self.spd[:, :, :, :-1, :], axis=3)
+        self.spd[:, :, :, -1, 0] = 0
 
                                
     def parse_structure(self):
@@ -926,10 +834,10 @@ class QEParser():
         nspins = spd.shape[2]
         
         norbitals = spd.shape[4] - 2
-        # if spd.shape[2] == 4:
-        #     nspins = 3
-        # else:
-        #     nspins = spd.shape[2]
+        if spd.shape[2] == 4:
+            nspins = 3
+        else:
+            nspins = spd.shape[2]
         # if nspins == 2:
         #     nbands = int(spd.shape[1] / 2)
         # else:
@@ -945,13 +853,13 @@ class QEParser():
         temp_spd = np.swapaxes(temp_spd, 2, 3)
         # (nkpoints,nbands, natom, norbital, nspin)
         # projected[ikpoint][iband][iatom][iprincipal][iorbital][ispin]
-        # if nspins == 3:
-        #     projected[:, :, :, 0, :, :] = temp_spd[:, :, :-1, 1:-1, :-1]
-        # elif nspins == 2:
-        #     projected[:, :, :, 0, :, 0] = temp_spd[:, :nbands, :-1, 1:-1, 0]
-        #     projected[:, :, :, 0, :, 1] = temp_spd[:, nbands:, :-1, 1:-1, 0]
-        # else:
-        projected[:, :, :, 0, :, :] = temp_spd[:, :, :-1, 1:-1, :]
+        if nspins == 3:
+            projected[:, :, :, 0, :, :] = temp_spd[:, :, :-1, 1:-1, 1:]
+        elif nspins == 2:
+            projected[:, :, :, 0, :, 0] = temp_spd[:, :, :-1, 1:-1, 0]
+            projected[:, :, :, 0, :, 1] = temp_spd[:, :, :-1, 1:-1, 1]
+        else:
+            projected[:, :, :, 0, :, :] = temp_spd[:, :, :-1, 1:-1, :]
         return projected
     
     @property 
