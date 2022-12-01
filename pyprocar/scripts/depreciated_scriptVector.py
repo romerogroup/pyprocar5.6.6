@@ -2,7 +2,7 @@ from ..utilsprocar import UtilsProcar
 from ..io import ProcarParser
 from ..procarselect import ProcarSelect
 from ..procarplot import ProcarPlot
-from ..fermisurface import FermiSurface
+from ..core import FermiSurface
 from ..splash import welcome
 
 

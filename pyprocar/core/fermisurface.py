@@ -1,8 +1,14 @@
-import numpy as np
+__author__ = "Pedram Tavadze and Logan Lang"
+__maintainer__ = "Pedram Tavadze and Logan Lang"
+__email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
+__date__ = "December 01, 2020"
+
+import sys
 import re
 import logging
+
+import numpy as np
 import matplotlib.pyplot as plt
-import sys
 
 
 class FermiSurface:
@@ -42,16 +48,18 @@ class FermiSurface:
         self.log.debug("FermiSurface.init: ...Done")
         return
 
-    def FindEnergy(self, energy):
+    def find_energy(self, energy):
         self.log.debug("FindEnergy: ...")
         self.energy = energy
         self.log.info("Energy   : " + str(energy))
         bands = self.bands.transpose()
         # searching for bands crossing the desired energy
+        
         self.useful = np.where(
             np.logical_and(bands.min(axis=1) < energy, bands.max(axis=1) > energy)
         )
         self.log.info("set of useful bands    : " + str(self.useful))
+
         bands = bands[self.useful]
         self.log.debug("new bands.shape : " + str(bands.shape))
         if len(bands) == 0:
@@ -60,7 +68,7 @@ class FermiSurface:
         self.log.debug("FindEnergy: ...Done")
         return
 
-    def Plot(self, interpolation=200, mask=None):
+    def plot(self, interpolation=500, mask=None):
         """Only 2D layer geometry along z"""
         self.log.debug("Plot: ...")
         from scipy.interpolate import griddata
@@ -74,6 +82,7 @@ class FermiSurface:
 
         bands = self.bands.transpose()[self.useful]
 
+
         # and new, interpolated component
         xmax, xmin = x.max(), x.min()
         ymax, ymin = y.max(), y.min()
@@ -81,13 +90,12 @@ class FermiSurface:
         xnew, ynew = np.mgrid[
             xmin : xmax : interpolation * 1j, ymin : ymax : interpolation * 1j
         ]
-
         # interpolation
         bnew = []
         for band in bands:
             self.log.debug("Interpolating ...")
             bnew.append(griddata((x, y), band, (xnew, ynew), method="cubic"))
-
+        bnew = np.array(bnew)
         plots = [
             plt.contour(
                 xnew,
@@ -104,7 +112,7 @@ class FermiSurface:
         self.log.debug("Plot: ...Done")
         return plots
 
-    def st(self, sx, sy, sz, spin=None, noarrow=False, interpolation=300):
+    def spin_texture(self, sx, sy, sz, spin=None, noarrow=False, interpolation=300):
         """Only 2D layer geometry along z. It is like a enhanced version
     of 'plot' method.
 
@@ -113,7 +121,7 @@ class FermiSurface:
     class)
 
     """
-        self.log.debug("st: ...")
+        self.log.debug("spin_texture: ...")
         from scipy.interpolate import griddata
 
         if self.useful is None:
@@ -124,6 +132,7 @@ class FermiSurface:
 
         bands = self.bands.transpose()[self.useful]
 
+        # print(sx.shape)
         sx = sx.transpose()[self.useful]
         sy = sy.transpose()[self.useful]
         sz = sz.transpose()[self.useful]

@@ -106,7 +106,10 @@ class QEParser():
 
             self.pdos_prefix = re.findall("filpdos\s*=\s*'(.*)'", pdosIn)[0]
             self.proj_prefix = re.findall("filproj\s*=\s*'(.*)'", pdosIn)[0]
-            
+
+            self.delta_e = float(re.findall("DeltaE\s*=\s*([0-9.]*)", pdosIn)[0])
+            self.degauss = float(re.findall("degauss\s*=\s*([0-9.]*)", pdosIn)[0])
+            self.ngauss = int(re.findall("ngauss\s*=\s*([0-9.]*)", pdosIn)[0])
         #Parsing spd array and spd phase arrays
         if os.path.exists(f"{dirname}{atomic_proj_xml}"):
             self.parse_wfc_mapping()
@@ -386,12 +389,9 @@ class QEParser():
         return ret   
     
     def parse_pdos(self):
-    
-    
-        rf = open(f"{self.dirname}{os.sep}{self.pdos_prefix}.pdos_tot")
-        data = rf.readlines()
-        rf.close()
-        
+
+        with open(f"{self.dirname}{os.sep}{self.pdos_prefix}.pdos_tot") as f:
+            data = f.readlines()
         ###################################################################
         # Parsing total density of states
         ###################################################################
@@ -441,10 +441,12 @@ class QEParser():
                 file.endswith(".pdos_tot") and not 
                 file.endswith(".lowdin") and not 
                 file.endswith(".projwfc_down") and not 
-                file.endswith(".projwfc_up")):
+                file.endswith(".projwfc_up")and not 
+                file.endswith(".xml")):
+                
                 filename = f"{self.dirname}/{file}"
                 wfc_filenames.append(filename )
-
+                
                 atm_num = int(re.findall("_atm#([0-9]*)\(.*",filename)[0])
                 wfc_num = int(re.findall("_wfc#([0-9]*)\(.*",filename)[0])
                 wfc = re.findall("_wfc#[0-9]*\(([A-Za-z]*)\).*",filename)[0]
@@ -627,7 +629,11 @@ class QEParser():
                     )
                     
     def parse_wfc_mapping(self):
-        with open(f"{self.dirname}{os.sep}kpdos.out") as f:
+        if os.path.exists(f"{self.dirname}{os.sep}kpdos.out"):
+            proj_out_file = f"{self.dirname}{os.sep}kpdos.out"
+        if os.path.exists(f"{self.dirname}{os.sep}pdos.out"):
+            proj_out_file = f"{self.dirname}{os.sep}pdos.out"
+        with open(proj_out_file) as f:
             data =  f.read()
 
         raw_wfc  =  re.findall('(?<=read\sfrom\spseudopotential\sfiles).*\n\n([\S\s]*?)\n\n(?=\sk\s=)', data)[0]
@@ -880,6 +886,11 @@ class QEParser():
         return  (2 * np.pi / self.alat) * np.array([ acell.text.split() for acell  in self.root.findall(".//output/basis_set/reciprocal_lattice")[0] ],dtype = float)
     
     
+    def kpoints_cart(self):
+        # cart_kpoints self.kpoints = self.kpoints*(2*np.pi /self.alat)
+        # Converting back to crystal basis
+        cart_kpoints = self.kpoints.dot(self.reciprocal_lattice) * (self.alat/ (2*np.pi))
+        return cart_kpoints
 def str2bool(v):
   return v.lower() in ("true") 
         

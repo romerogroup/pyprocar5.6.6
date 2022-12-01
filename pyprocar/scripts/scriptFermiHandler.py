@@ -677,7 +677,7 @@ class FermiHandler:
 
                                 # plotting saving options
                                 plot_brillouin_zone:bool=True,
-                                arrow_color: List[str] or List[Tuple[float,float,float]]=None,
+                                arrow_color: str or List[Tuple[float,float,float]]=None,
                                 arrow_size: float=0.015,
                                 colors: List[str] or List[Tuple[float,float,float]]=None,
                                 spin_colors: List[str] or List[Tuple[float,float,float]]=None,
@@ -692,6 +692,7 @@ class FermiHandler:
                                 background_color:str or Tuple[float,float,float,float]="white",
                                 perspective:bool=True,
                                 save_2d:bool=None,
+                                save_2d_slice:str=None,
                                 save_gif:str=None,
                                 save_mp4:str=None,
                                 save_3d:str=None
@@ -780,16 +781,25 @@ class FermiHandler:
                                                 calculate_fermi_velocity=calculate_fermi_velocity,
                                                 calculate_effective_mass=calculate_effective_mass)
 
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
-            raise Exception("Slices do not work for vectors")
+        # if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
 
+        #     arrows = fermi_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
+        #     tot_surface = fermi_surface + arrows
+        #     # options_dict['scalars'] = 'spin_magnitude'
+        # else:
+        #     tot_surface= fermi_surface
+        # if arrow_color:
+        #     options_dict['scalars']= None
+        tot_surface= fermi_surface
         add_custom_mesh_slice(plotter = plotter, 
-                                mesh=fermi_surface,
+                                mesh=tot_surface,
                                 options_dict=options_dict, 
                                 show_cross_section_area=show_cross_section_area,
                                 line_width=line_width,
                                 normal=slice_normal, 
-                                origin = slice_origin,  
+                                origin = slice_origin,
+                                cmap=cmap,
+                                arrow_color=arrow_color,
                                 scalars = options_dict['scalars'])
 
         if mode != "plain" or spin_texture:
@@ -816,9 +826,27 @@ class FermiHandler:
         if not perspective:
             plotter.enable_parallel_projection()
         plotter.set_background(background_color)
-
         if show:
             plotter.show(cpos=camera_pos, screenshot=save_2d)
+        if save_2d_slice:
+            slice_2d = plotter.plane_sliced_meshes[0]
+            plotter.close()
+            point1 = slice_2d.points[0,:]
+            point2 = slice_2d.points[1,:]
+            normal_vec = np.cross(point1,point2)
+            p = pv.Plotter()
+
+            if options_dict['vector_name']:
+                arrows = slice_2d.glyph(orient=options_dict['vector_name'], scale=False, factor=0.1)
+            if arrow_color is not None:
+                p.add_mesh(arrows, color=arrow_color, show_scalar_bar=False,name='arrows')
+            else:
+                p.add_mesh(arrows, cmap=cmap, show_scalar_bar=False,name='arrows')
+            p.add_mesh(slice_2d,line_width=line_width)
+            p.remove_scalar_bar()
+            # p.set_background(background_color)
+            p.view_vector(normal_vec)
+            p.show(screenshot=save_2d_slice,interactive=False)
 
     def plot_fermi_surface_area_vs_isovalue(self,
                         iso_range: float=3,
@@ -1134,7 +1162,7 @@ class FermiHandler:
         elif mode == 'spin_texture':
             text = "Spin Texture"
             use_rgba = False
-            scalars = "spin"
+            scalars = "spin_magnitude"
             vector_name = 'spin'
 
         options_dict = {
@@ -1220,9 +1248,15 @@ def add_custom_mesh_slice(
                     outline_translation=False, 
                     implicit=True,
                     normal_rotation=True, 
+                    cmap='jet',
+                    arrow_color=None,
                     **kwargs):
 
         name = kwargs.get('name', mesh.memory_address)
+
+        # print(name)
+        # if kwargs.get('scalars', mesh.active_scalars_name) != 'spin':
+            
         rng = mesh.get_data_range(kwargs.get('scalars', None))
         kwargs.setdefault('clim', kwargs.pop('rng', rng))
         mesh.set_active_scalars(kwargs.get('scalars', mesh.active_scalars_name))
@@ -1243,6 +1277,8 @@ def add_custom_mesh_slice(
             user_slice = plotter.plane_sliced_meshes[0]
             surface = user_slice.delaunay_2d()
             plotter.add_text(f"Cross sectional area : {surface.area:.4f}"+" m^-2", color = 'black')
+
+  
         def callback(normal, origin):
             # create the plane for clipping
             
@@ -1250,13 +1286,23 @@ def add_custom_mesh_slice(
             alg.SetCutFunction(plane) # the cutter to use the plane we made
             alg.Update() # Perform the Cut
             plane_sliced_mesh.shallow_copy(alg.GetOutput())
+            # plotter.add_mesh(plane_sliced_mesh, name=name+"outline", opacity=0.0, line_width=line_width,show_scalar_bar=False, rgba=options_dict['use_rgba'])
+            if options_dict['vector_name']:
+                arrows = plane_sliced_mesh.glyph(orient=options_dict['vector_name'], scale=False, factor=0.1)
+                
+                if arrow_color is not None:
+                    plotter.add_mesh(arrows, color=arrow_color, show_scalar_bar=False,name='arrows')
+                else:
+                    plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False,name='arrows')
 
+            
             if show_cross_section_area:
                 user_slice = plotter.plane_sliced_meshes[0]
                 surface = user_slice.delaunay_2d()
                 text = f"Cross sectional area : {surface.area:.4f}"+" m^-2"
 
                 plotter.textActor.SetText(2, text)
+
 
 
 
