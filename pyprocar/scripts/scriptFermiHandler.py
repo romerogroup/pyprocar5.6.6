@@ -191,7 +191,7 @@ class FermiHandler:
                                                 calculate_effective_mass=calculate_effective_mass)
 
         # Adding meshes
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+        if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
             arrows = fermi_surface3D.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
             if arrow_color is None:
                 plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False)
@@ -324,7 +324,7 @@ class FermiHandler:
                     position_y=0.01,
                     color="black",)
             
-            if options_dict['scalars'] == "spin" or options_dict['scalars'] == "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] == "spin_magnitude" or options_dict['scalars'] == "Fermi Velocity Vector_magnitude":
                 if arrow_color is None:
                     
                     arrows=e_surfaces[closest_idx].glyph(
@@ -590,7 +590,7 @@ class FermiHandler:
                                                 calculate_effective_mass=calculate_effective_mass)
  
         # Adding meshes
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+        if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
             arrows = fermi_surface3D.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
             if arrow_color is None:
                 plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False)
@@ -631,7 +631,7 @@ class FermiHandler:
         # Run through each frame
         for e_surface,evalues in zip(e_surfaces,energy_values):
             surface.overwrite(e_surface)
-            if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
                 e_arrows = e_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
                 arrows.overwrite(e_arrows)
             text = f'Energy Value : {evalues:.4f} eV'
@@ -641,7 +641,7 @@ class FermiHandler:
         # Run backward through each frame
         for e_surface, evalues in zip(e_surfaces[::-1],energy_values[::-1]):
             surface.overwrite(e_surface)
-            if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
                 e_arrows = e_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
                 arrows.overwrite(e_arrows)
             plotter.write_frame()
@@ -982,7 +982,6 @@ class FermiHandler:
             if self.apply_symmetry:
                 parser.ebs.ibz2fbz(parser.rotations)
 
-
         elif self.code == "lobster":
             procarFile = LobsterFermiParser()
             reciprocal_lattice = procarFile.reclat
@@ -1040,7 +1039,6 @@ class FermiHandler:
                             )
 
             parser.ebs.bands += e_fermi
-            
         parser.ebs.bands += e_fermi
         return parser, reciprocal_lattice, e_fermi
 
@@ -1097,7 +1095,7 @@ class FermiHandler:
             ebsX = copy.deepcopy(self.parser.ebs)
             ebsY = copy.deepcopy(self.parser.ebs)
             ebsZ = copy.deepcopy(self.parser.ebs)
-
+            print(ebsX.projected.shape)
             ebsX.projected = ebsX.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
             ebsY.projected = ebsY.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
             ebsZ.projected = ebsZ.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)

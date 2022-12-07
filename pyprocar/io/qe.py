@@ -670,6 +670,7 @@ class QEParser():
         natm = len(self.species)
 
         self.spd = np.zeros(shape = (nk, self.nbnd , nspin ,natm+1,norb + 2,))
+        print(self.spd.shape)
         self.spd_phase = np.zeros(
             shape=(
                self.spd.shape
@@ -834,6 +835,7 @@ class QEParser():
         if spd is None:
             return None
         natoms = spd.shape[3] - 1
+
         nkpoints = spd.shape[0]
 
         nbands = spd.shape[1]

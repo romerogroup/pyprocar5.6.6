@@ -339,7 +339,6 @@ class ElectronicBandStructure:
 
                 if sympoint not in klist:
                     klist.append(sympoint)
-
                     if self.bands is not None:
                         band = self.bands[j].tolist()
                         bandslist.append(band)
