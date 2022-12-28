@@ -162,8 +162,8 @@ def bandsplot(
                 )
                 weights.append(w)
         if mode == "overlay_orbitals":
-            for iorb in ["s", "p", "d", "f"]:
-                if iorb == "f" and not ebs_plot.ebs.norbitals > 9:
+            for orb in ["s", "p", "d", "f"]:
+                if orb == "f" and not ebs_plot.ebs.norbitals > 9:
                     continue
                 labels.append(iorb)
                 orbitals = orbital_names[iorb]
@@ -220,10 +220,8 @@ def bandsplot(
                 orbitals = np.append(orbitals, orbital_names[iorb]).astype(np.int)
 
 
-        weights = ebs_plot.ebs.ebs_sum(
-            atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins)
+        weights = ebs_plot.ebs.ebs_sum(atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins)
             
-        
         if settings.ebs.weighted_color:
             color_weights = weights
         else:

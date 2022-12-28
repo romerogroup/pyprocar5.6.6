@@ -1,13 +1,16 @@
-import sys
+__author__ = "Pedram Tavadze and Logan Lang"
+__maintainer__ = "Pedram Tavadze and Logan Lang"
+__email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
+__date__ = "March 31, 2020"
+
 from typing import List
-import re
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 import matplotlib
-
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
+
 from ..utils.defaults import settings
 
 class EBSPlot:
@@ -34,6 +37,11 @@ class EBSPlot:
         self.ebs = ebs
         self.kpath = kpath
         self.spins = spins
+        if self.spins is None:
+            self.spins = range(self.ebs.nspins)
+        self.nspins = len(self.spins)
+        if self.ebs.is_non_collinear:
+            self.spins = [0]
         self.handles = []
         settings.modify(kwargs)
 
@@ -52,12 +60,6 @@ class EBSPlot:
 
         
     def _initiate_plot_args(self):
-
-        if self.spins is None:
-            self.spins = range(self.ebs.nspins)
-        self.nspins = len(self.spins)
-        if self.ebs.is_non_collinear:
-            self.spins = [0]
         self.set_xticks()
         self.set_yticks()
         self.set_xlabel()
@@ -113,8 +115,7 @@ class EBSPlot:
         None.
 
         """
-        print(self.ebs.bands.shape)
-        print(self.x.shape)
+        
         for ispin in self.spins:
             for iband in range(self.ebs.nbands):
                 handle = self.ax.plot(
@@ -224,7 +225,7 @@ class EBSPlot:
         if self.ebs.is_non_collinear:
             spins = [0]
         
-
+        
         if width_mask is not None or color_mask is not None:
             if width_mask is not None:
                 mbands = np.ma.masked_array(

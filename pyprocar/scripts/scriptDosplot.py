@@ -332,19 +332,10 @@ def dosplot(
 
     """
     
-    
-    if mode not in [
-            'plain', 'parametric_line', 'parametric', 'stack_species',
-            'stack_orbitals', 'stack']:
-        raise ValueError(
-            "Mode should be choosed from ['plain', 'parametric_line','parametric','stack_species','stack_orbitals','stack']"
-        )
-
     if orientation[0].lower() == 'h':
         orientation = 'horizontal'
     elif orientation[0].lower() == 'v':
         orientation = 'vertical'
-
 
     dos, structure, reciprocal_lattice = parse(
                                         code=code,
@@ -360,12 +351,12 @@ def dosplot(
     if elimit is None:
         elimit = [dos.energies.min(), dos.energies.max()]
     
-    edos_plot = DOSPlot(dos = dos, structure = structure, spins = spins, orientation = orientation)
+    edos_plot = DOSPlot(dos = dos, structure = structure, orientation = orientation)
     
     if mode == "plain":
-        edos_plot.plot_dos(orientation = orientation)
+        edos_plot.plot_dos(spins=spins, orientation = orientation)
 
-    if mode == "parametric":
+    elif mode == "parametric":
         if atoms is None:
             atoms = list(np.arange(edos_plot.structure.natoms, dtype=int))
         if spins is None:
@@ -377,6 +368,7 @@ def dosplot(
                         atoms=atoms,
                         principal_q_numbers=[-1],
                         orbitals=orbitals,
+                        spins=spins,
                         spin_colors=spin_colors,
                         spin_labels=spin_labels,
                         cmap=cmap,
@@ -386,7 +378,7 @@ def dosplot(
                         plot_total=plot_total,
                         plot_bar=True)
 
-    if mode == "parametric_line":
+    elif mode == "parametric_line":
         if atoms is None:
             atoms = list(np.arange(edos_plot.structure.natoms, dtype=int))
         if spins is None:
@@ -397,13 +389,18 @@ def dosplot(
         edos_plot.plot_parametric_line(
                         atoms=atoms,
                         principal_q_numbers=[-1],
+                        spins=spins,
                         orbitals=orbitals,
                         spin_colors=spin_colors,
+                        vmax=vmax,
+                        vmin=vmin,
+                        cmap=cmap,
                         orientation=orientation
                         )
 
-    if mode == "stack_species":
+    elif mode == "stack_species":
         edos_plot.plot_stack_species(
+            spins=spins,
             orbitals=orbitals,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -414,6 +411,7 @@ def dosplot(
 
     elif mode == "stack_orbitals":
         edos_plot.plot_stack_orbitals(
+            spins=spins,
             atoms=atoms,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -424,6 +422,7 @@ def dosplot(
 
     elif mode == "stack":
         edos_plot.plot_stack(
+            spins=spins,
             items=items,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -431,6 +430,8 @@ def dosplot(
             orientation=orientation,
             plot_total = plot_total,
         )
+    else:
+        raise ValueError("The mode needs to be in the List [plain,parametric,parametric_line,stack_species,stack_orbitals,stack]")
 
     edos_plot.draw_fermi(
             orientation = orientation,

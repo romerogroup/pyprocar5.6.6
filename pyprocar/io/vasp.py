@@ -1142,11 +1142,26 @@ class VaspXML(collections.abc.Mapping):
         else:
             self.filename = filename
 
-        self.spins_dict = {"spin 1": "Spin-up", "spin 2": "Spin-down"}
+        
         # self.positions = None
         # self.stress = None
         # self.array_sizes = {}
         self.data = self.read()
+
+        spins = list(self.data["general"]["dos"]["total"]["array"]["data"].keys())
+        if len(spins)==4:
+            self.is_noncolinear = True
+            self.spins_dict = {"spin 1": "Spin-Total", 
+                                "spin 2": "Spin-x",
+                                "spin 3": "Spin-y", 
+                                "spin 4": "Spin-z"}
+            # self.spins_dict = {"spin 4": "Spin-Total", 
+            #                     "spin 1": "Spin-x",
+            #                     "spin 2": "Spin-y", 
+            #                     "spin 3": "Spin-z"}
+        else:
+            self.is_noncolinear = False
+            self.spins_dict = {"spin 1": "Spin-up", "spin 2": "Spin-down"}
 
     def read(self):
         """
@@ -1246,9 +1261,11 @@ class VaspXML(collections.abc.Mapping):
             self.data["general"]["dos"]["total"]["array"]["data"][spins[0]]
         )[:, 0]
         dos_total = {"energies": energies}
-        for ispin in spins:
-            dos_total[self.spins_dict[ispin]] = np.array(
-                self.data["general"]["dos"]["total"]["array"]["data"][ispin]
+
+        
+        for spin_name in spins:
+            dos_total[self.spins_dict[spin_name]] = np.array(
+                self.data["general"]["dos"]["total"]["array"]["data"][spin_name]
             )[:, 1]
 
         return dos_total, list(dos_total.keys())
@@ -1283,6 +1300,8 @@ class VaspXML(collections.abc.Mapping):
                             ispin
                         ][ispin]
                     )[:, 1:]
+                if 'Spin-Total' in list(dos_projected[name].keys()):
+                    del dos_projected[name]['Spin-Total']
             return (
                 dos_projected,
                 self.data["general"]["dos"]["partial"]["array"]["info"],

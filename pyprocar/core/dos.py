@@ -11,6 +11,8 @@ __maintainer__ = "Logan Lang, Pedram Tavadze"
 __email__ = "petavazohi@spot.colorado.edu"
 __status__ = "Production"
 
+from typing import List
+
 from traceback import print_tb
 from scipy.interpolate import CubicSpline
 import numpy as np
@@ -95,12 +97,17 @@ class DensityOfStates:
     
     @property
     def is_non_collinear(self):
-        if self.n_spins == 3:
+        if self.n_spins == 4:
             return True
         else:
             return False
 
-    def dos_sum(self, atoms=None, principal_q_numbers=[-1], orbitals=None, spins=None):
+    def dos_sum(self, 
+                atoms:List[int]=None,
+                principal_q_numbers:List[int]=[-1],  
+                orbitals:List[int]=None,
+                spins:List[int]=None,
+                sum_noncolinear:bool=True):
         """
         +-------+-----+------+------+------+------+------+------+------+------+
         |n-lm   |  0  |   1  |  2   |   3  |   4  |   5  |   6  |   7  |   8  |
@@ -138,23 +145,31 @@ class DensityOfStates:
         """
 
         projected = self.projected
+
         principal_q_numbers = np.array(principal_q_numbers)
         if atoms is None:
             atoms = np.arange(len(projected), dtype=int)
         if spins is None:
             spins = np.arange(len(projected[0][0][0]), dtype=int)
-
         if orbitals is None:
             orbitals = np.arange(len(projected[0][0]), dtype=int)
-        orbitals = np.array(orbitals)
-
-        ret = np.zeros(shape=(2, self.n_dos))
-        for iatom in atoms:
-            for iprinc in principal_q_numbers:
-                for ispin in spins:
-                    temp = np.array(projected[iatom][iprinc])
-
-                    ret[ispin, :] += temp[orbitals, ispin].sum(axis=0)
+        print(orbitals)
+        # Adjusting for spin type calculation
+        if self.n_spins == 2:
+            ret = np.zeros(shape=( 2, self.n_dos))
+            for iatom in atoms:
+                for iprinc in principal_q_numbers:
+                    for ispin in spins:
+                        temp = np.array(projected[iatom][iprinc])
+                        ret[ispin, :] += temp[orbitals, ispin].sum(axis=0)
+        # This else covers colinear and non-colinear calcualtions
+        else:
+            ret = np.zeros(shape=(1, self.n_dos))
+            for iatom in atoms:
+                for iprinc in principal_q_numbers:
+                    for ispin in spins:
+                        temp = np.array(projected[iatom][iprinc])
+                        ret[0, :] += temp[orbitals, ispin].sum(axis=0)
 
         return ret
 
