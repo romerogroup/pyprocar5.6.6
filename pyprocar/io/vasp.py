@@ -1262,7 +1262,6 @@ class VaspXML(collections.abc.Mapping):
         )[:, 0]
         dos_total = {"energies": energies}
 
-        
         for spin_name in spins:
             dos_total[self.spins_dict[spin_name]] = np.array(
                 self.data["general"]["dos"]["total"]["array"]["data"][spin_name]

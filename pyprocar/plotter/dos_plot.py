@@ -93,7 +93,8 @@ class DOSPlot:
                 self.set_xlabel('Energy (eV)')
                 self.set_ylabel('DOS')
                 self.set_xlim([self.dos.energies.min(),self.dos.energies.max()])
-                self.set_ylim([self.dos.total.min(),self.dos.total.max()])
+                self.set_ylim([self.dos.total[ispin,:].min(),self.dos.total[ispin,:].max()])
+
                 handle = self.ax.plot(
                     self.dos.energies, self.dos.total[ispin, :], color=settings.dos.spin_colors[ispin], alpha=settings.dos.opacity[
                         ispin], linestyle=settings.dos.linestyle[ispin], label=settings.dos.spin_labels[ispin], linewidth=settings.dos.linewidth[ispin],
@@ -101,7 +102,7 @@ class DOSPlot:
             elif orientation == 'vertical':
                 self.set_xlabel('DOS')
                 self.set_ylabel('Energy (eV)')
-                self.set_xlim([self.dos.total.min(),self.dos.total.max()])
+                self.set_xlim([self.dos.total[ispin,:].min(),self.dos.total[ispin,:].max()])
                 self.set_ylim([self.dos.energies.min(),self.dos.energies.max()])
                 handle = self.ax.plot(
                         self.dos.total[ispin, :], self.dos.energies, color=settings.dos.spin_colors[ispin], alpha=settings.dos.opacity[
@@ -128,25 +129,23 @@ class DOSPlot:
             else:
                 spins = range(self.dos.n_spins)
         spin_projections = spins
+
         # This covers the non-colinear case when spins only represent projections.  
         if self.dos.is_non_collinear:
             spins = [0]
-        
+
         dos_total = np.array(self.dos.total)
         dos_total_projected = self.dos.dos_sum()
         dos_projected = self.dos.dos_sum(atoms=atoms,
                                principal_q_numbers=principal_q_numbers,
                                orbitals=orbitals,
                                spins=spin_projections)
-
-        
-
+        # print(np.where(np.logical_and( self.dos.energies>-51, self.dos.energies<-50)))
         if spin_colors is None:
             spin_colors = settings.dos.spin_colors
         if spin_labels is None:
             spin_labels = settings.dos.spin_labels
 
-        
         if vmin is None:
             vmin = 0
         if vmax is None:
@@ -168,6 +167,7 @@ class DOSPlot:
             else:
                 self.set_ylim([0,self.dos.total.max()])
 
+
             for spins_index , ispin in enumerate(spins):
                 x = []
                 y_total = []
@@ -183,7 +183,6 @@ class DOSPlot:
                         y_total_projected *= -1
 
                     bar_color.append(cmap(y / (y_total_projected )))#* (vmax - vmin))))
-
 
                 for idos in range(len(x) - 1):
                     self.ax.fill_between([x[idos], x[idos + 1]],
@@ -225,7 +224,7 @@ class DOSPlot:
                         y_total[-1] *= -1
                         y_total_projected *= -1
 
-                    bar_color.append(cmap(y / (y_total_projected )))#* (vmax - vmin))))
+                    bar_color.append(cmap(y / (y_total_projected )))
 
 
                 for idos in range(len(x) - 1):
@@ -281,8 +280,7 @@ class DOSPlot:
                                spins=spin_projections)
 
         projections_weights = np.divide(dos_projected,dos_total_projected)
-        
-        # 
+
         if vmin is None:
             vmin = 0
         if vmax is None:
@@ -365,27 +363,50 @@ class DOSPlot:
             else:
                 spins = range(self.dos.n_spins)
         spin_projections = spins
+
         if self.dos.is_non_collinear:
             spins = [0]
 
-        if orbitals:
-            print("The plot only considers orbitals", orbitals)
-            label = "-"
-            if sum([x in orbitals for x in [0]]) == 1:
-                label += "s"
-            if sum([x in orbitals for x in [1, 2, 3]]) == 3:
-                label += "p"
-            if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
-                label += "d"
-            if sum([x in orbitals for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
-                label += "f"
-        else:
-            if len(self.dos.projected[0][0]) == 1 + 3 + 5:
-                label = "-spd"
-            elif len(self.dos.projected[0][0]) == 1 + 3 + 5 + 7:
-                label = "-spdf"
-            else:
+        # This condition will depend on which orbital basis is being used.
+        if self.dos.is_non_collinear and len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+            spins = [0]
+            if orbitals:
+                print("The plot only considers orbitals", orbitals)
                 label = "-"
+                if sum([x in orbitals for x in [0,1]]) == 2:
+                    label += "s-j=0.5"
+                if sum([x in orbitals for x in [2,3]]) == 2:
+                    label += "p-j=0.5"
+                if sum([x in orbitals for x in [4,5,6,7]]) == 4:
+                    label += "p-j=1.5"
+                if sum([x in orbitals for x in [8,9,10,11]]) == 4:
+                    label += "d-j=1.5"
+                if sum([x in orbitals for x in [12,13,14,15,16,17]]) == 6:
+                    label += "d-j=2.5"
+            else:
+                if len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+                    label = "-spd-j=0.5,1.5,2.5"
+                else:
+                    label = "-"
+        else:
+            if orbitals:
+                print("The plot only considers orbitals", orbitals)
+                label = "-"
+                if sum([x in orbitals for x in [0]]) == 1:
+                    label += "s"
+                if sum([x in orbitals for x in [1, 2, 3]]) == 3:
+                    label += "p"
+                if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
+                    label += "d"
+                if sum([x in orbitals for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
+                    label += "f"
+            else:
+                if len(self.dos.projected[0][0]) == 1 + 3 + 5:
+                    label = "-spd"
+                elif len(self.dos.projected[0][0]) == 1 + 3 + 5 + 7:
+                    label = "-spdf"
+                else:
+                    label = "-"
 
         if colors is None:
             colors = settings.dos.colors
@@ -546,10 +567,13 @@ class DOSPlot:
             all_atoms += ispc + "-"
         if atom_names == all_atoms:
             atom_names = ""
-        
-        orb_names = ["s", "p", "d"]
-        orb_l = [[0], [1, 2, 3], [4, 5, 6, 7, 8]]
 
+        if self.dos.is_non_collinear and len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+            orb_names = ["s-j=0.5", "p-j=0.5", "p-j=1.5", "d-j=1.5", "d-j=2.5"]
+            orb_l = [[0,1], [2,3], [4, 5, 6, 7], [8,9,10,11], [12,13,14,15,16,17]]
+        else:
+            orb_names = ["s", "p", "d"]
+            orb_l = [[0], [1, 2, 3], [4, 5, 6, 7, 8]]
 
         if colors is None:
             colors = settings.dos.colors
@@ -570,7 +594,7 @@ class DOSPlot:
             for spins_index , ispin in enumerate(spins):
                 bottom = np.zeros_like(self.dos.energies)
 
-                for iorb in range(3):
+                for iorb in range(len(orb_l)):
                     dos = self.dos.dos_sum(atoms=atoms,
                                         principal_q_numbers=principal_q_numbers,
                                         orbitals=orb_l[iorb],
@@ -624,7 +648,7 @@ class DOSPlot:
             for spins_index , ispin in enumerate(spins):
                 bottom = np.zeros_like(self.dos.energies)
 
-                for iorb in range(3):
+                for iorb in range(len(orb_l)):
                     dos = self.dos.dos_sum(atoms=atoms,
                                         principal_q_numbers=principal_q_numbers,
                                         orbitals=orb_l[iorb],
@@ -696,13 +720,19 @@ class DOSPlot:
         spin_projections = spins
         if self.dos.is_non_collinear:
             spins = [0]
-
-        if len(self.dos.projected[0][0]) == (1 + 3 + 5):
-            all_orbitals = "spd"
-        elif len(self.dos.projected[0][0]) == (1 + 3 + 5 + 7):
-            all_orbitals = "spdf"
+        
+        if self.dos.is_non_collinear and len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+            if len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+                all_orbitals = "-spd-j=0.5,1.5,2.5"
+            else:
+                all_orbitals = "-"
         else:
-            all_orbitals = ""
+            if len(self.dos.projected[0][0]) == (1 + 3 + 5):
+                all_orbitals = "spd"
+            elif len(self.dos.projected[0][0]) == (1 + 3 + 5 + 7):
+                all_orbitals = "spdf"
+            else:
+                all_orbitals = ""
 
         if colors is None:
             colors = settings.dos.colors
@@ -739,17 +769,33 @@ class DOSPlot:
                                         orbitals=orbitals)
 
                     label = "-"
-                    if sum([x in orbitals for x in [0]]) == 1:
-                        label += "s"
-                    if sum([x in orbitals for x in [1, 2, 3]]) == 3:
-                        label += "p"
-                    if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
-                        label += "d"
-                    if sum([x in orbitals
-                            for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
-                        label += "f"
-                    if label == "-" + all_orbitals:
-                        label = ""
+                    # For coupled basis
+                    if  len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+                        if sum([x in orbitals for x in [0,1]]) == 2:
+                            label += "s-j=0.5"
+                        if sum([x in orbitals for x in [2,3]]) == 2:
+                            label += "p-j=0.5"
+                        if sum([x in orbitals for x in [4,5,6,7]]) == 4:
+                            label += "p-j=1.5"
+                        if sum([x in orbitals for x in [8,9,10,11]]) == 4:
+                            label += "d-j=1.5"
+                        if sum([x in orbitals for x in [12,13,14,15,16,17]]) == 6:
+                            label += "d-j=2.5"
+                        if label == "-" + all_orbitals:
+                            label = ""
+                    # For uncoupled basis
+                    else:
+                        if sum([x in orbitals for x in [0]]) == 1:
+                            label += "s"
+                        if sum([x in orbitals for x in [1, 2, 3]]) == 3:
+                            label += "p"
+                        if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
+                            label += "d"
+                        if sum([x in orbitals
+                                for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
+                            label += "f"
+                        if label == "-" + all_orbitals:
+                            label = ""
                 
                     x = self.dos.energies
                     y = (dos[ispin] * dos_total[ispin]) / dos_projected_total[ispin]
@@ -806,17 +852,33 @@ class DOSPlot:
                                         orbitals=orbitals)
 
                     label = "-"
-                    if sum([x in orbitals for x in [0]]) == 1:
-                        label += "s"
-                    if sum([x in orbitals for x in [1, 2, 3]]) == 3:
-                        label += "p"
-                    if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
-                        label += "d"
-                    if sum([x in orbitals
-                            for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
-                        label += "f"
-                    if label == "-" + all_orbitals:
-                        label = ""
+                    # coupled basis
+                    if  len(self.dos.projected[0][0]) == 2 + 2 + 4 + 4 + 6:
+                        if sum([x in orbitals for x in [0,1]]) == 2:
+                            label += "s-j=0.5"
+                        if sum([x in orbitals for x in [2,3]]) == 2:
+                            label += "p-j=0.5"
+                        if sum([x in orbitals for x in [4,5,6,7]]) == 4:
+                            label += "p-j=1.5"
+                        if sum([x in orbitals for x in [8,9,10,11]]) == 4:
+                            label += "d-j=1.5"
+                        if sum([x in orbitals for x in [12,13,14,15,16,17]]) == 6:
+                            label += "d-j=2.5"
+                        if label == "-" + all_orbitals:
+                            label = ""
+                    # For uncoupled basis
+                    else:
+                        if sum([x in orbitals for x in [0]]) == 1:
+                            label += "s"
+                        if sum([x in orbitals for x in [1, 2, 3]]) == 3:
+                            label += "p"
+                        if sum([x in orbitals for x in [4, 5, 6, 7, 8]]) == 5:
+                            label += "d"
+                        if sum([x in orbitals
+                                for x in [9, 10, 11, 12, 13, 14, 15]]) == 7:
+                            label += "f"
+                        if label == "-" + all_orbitals:
+                            label = ""
                 
                     x = self.dos.energies
                     y = (dos[ispin] * dos_total[ispin]) / dos_projected_total[ispin]

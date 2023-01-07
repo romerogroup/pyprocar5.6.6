@@ -97,7 +97,7 @@ class DensityOfStates:
     
     @property
     def is_non_collinear(self):
-        if self.n_spins == 4:
+        if self.n_spins == 3 or self.n_spins==4:
             return True
         else:
             return False
@@ -145,7 +145,7 @@ class DensityOfStates:
         """
 
         projected = self.projected
-
+        
         principal_q_numbers = np.array(principal_q_numbers)
         if atoms is None:
             atoms = np.arange(len(projected), dtype=int)
@@ -153,7 +153,7 @@ class DensityOfStates:
             spins = np.arange(len(projected[0][0][0]), dtype=int)
         if orbitals is None:
             orbitals = np.arange(len(projected[0][0]), dtype=int)
-        print(orbitals)
+        # print(orbitals)
         # Adjusting for spin type calculation
         if self.n_spins == 2:
             ret = np.zeros(shape=( 2, self.n_dos))

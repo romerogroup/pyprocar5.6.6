@@ -20,8 +20,6 @@ import pyvista
 from .brillouin_zone import BrillouinZone
 from ..utils import Unfolder, mathematics
 
-# TODO add python typing to all functions
-
 class ElectronicBandStructure:
     def __init__(
         self,
@@ -147,7 +145,6 @@ class ElectronicBandStructure:
             spins = np.arange(self.nspins, dtype=int)
         if orbitals is None:
             orbitals = np.arange(self.norbitals, dtype=int)
-
         # sum over orbitals
         ret = np.sum(self.projected[:, :, :, :, orbitals, :], axis=-2)
         # sum over principle quantum number
