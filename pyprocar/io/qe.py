@@ -464,7 +464,7 @@ class QEParser():
         
             self.wfc_mapping.update({f"wfc_{iwfc}":{"orbital" : iorb, "atom" : iatm}})
 
-        print(self.orbitals)
+        # print(self.orbitals)
         return None
     def _parse_atomic_projections(self,atomic_proj_xml_filename):
 
@@ -487,7 +487,7 @@ class QEParser():
             ),
             dtype=np.complex_,
         )
-        print(self.wfc_mapping)
+        # print(self.wfc_mapping)
         ik = -1
         for ieigenstate, eigenstates_element in enumerate(atm_proj_root.findall(".//EIGENSTATES")[0]):
             # print(eigenstates_element.tag)

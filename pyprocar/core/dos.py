@@ -18,6 +18,9 @@ from scipy.interpolate import CubicSpline
 import numpy as np
 import numpy.typing as npt
 
+from sympy.physics.quantum.cg import CG
+
+
 # TODO When PEP 646 is introduced in numpy. need to update the python typing.
 
 class DensityOfStates:
@@ -172,6 +175,88 @@ class DensityOfStates:
                         ret[0, :] += temp[orbitals, ispin].sum(axis=0)
 
         return ret
+
+    def get_current_basis(self):
+
+        n_orbitals = self.projected.shape[2]
+
+        if n_orbitals == 18:
+            basis = 'jm basis'
+        elif n_orbitals == 9:
+            basis = 'spd basis'
+        elif n_orbitals == 9:
+            basis = 'spdf basis'
+        else:
+            basis = 'I do not know'
+        return basis
+
+    def coupled_to_uncoupled_basis(self):
+        """Converts coupled projections to uncoupled projections. This assumes the orbitals are order by:
+        coupled_orbitals = [
+                        {"l": 's', "j": 0.5, "m": -0.5},
+                        {"l": 's', "j": 0.5, "m": 0.5},
+
+                        {"l": 'p', "j": 0.5, "m": -0.5},
+                        {"l": 'p', "j": 0.5, "m": 0.5},
+
+                        {"l": 'p', "j": 1.5, "m": -1.5},
+                        {"l": 'p', "j": 1.5, "m": -0.5},
+                        {"l": 'p', "j": 1.5, "m": -0.5},
+                        {"l": 'p', "j": 1.5, "m": 1.5},
+
+                        {"l": 'd', "j": 1.5, "m": -1.5},
+                        {"l": 'd', "j": 1.5, "m": -0.5},
+                        {"l": 'd', "j": 1.5, "m": -0.5},
+                        {"l": 'd', "j": 1.5, "m": 1.5},
+
+                        {"l": 'd', "j": 2.5, "m": -2.5},
+                        {"l": 'd', "j": 2.5, "m": -1.5},
+                        {"l": 'd', "j": 2.5, "m": -0.5},
+                        {"l": 'd', "j": 2.5, "m": 0.5},
+                        {"l": 'd', "j": 2.5, "m": 1.5},
+                        {"l": 'd', "j": 2.5, "m": 2.5},
+                    ]
+        uncoupled_orbitals = [
+                    {"l": 0, "m": 1},
+                    {"l": 1, "m": 3},
+                    {"l": 1, "m": 1},
+                    {"l": 1, "m": 2},
+                    {"l": 2, "m": 5},
+                    {"l": 2, "m": 3},
+                    {"l": 2, "m": 1},
+                    {"l": 2, "m": 2},
+                    {"l": 2, "m": 4},
+                ]
+        :return: None
+        :rtype: None
+        """
+        n_atoms = self.projected.shape[0]
+        n_principle = self.projected.shape[1]
+        n_uncoupled_orbitals = self.projected.shape[2]
+        n_spins = self.projected.shape[3]
+        n_energy = self.projected.shape[4]
+        
+        uncoupled_projected = np.zeros(shape = (n_atoms,n_principle,n_uncoupled_orbitals,2,n_energy)  )
+
+        def x(proj_1,proj_2,clebsh_1,clebsch_2,clebsch_3,clebsch_4):
+            a = proj_2
+            b = clebsch_4 * (proj_1 - (clebsh_1/clebsch_3) * proj_2 ) / (clebsch_2 - (clebsh_1/clebsch_3) )
+            return (a - b) / clebsch_3
+
+        def y(proj_1,proj_2,clebsh_1,clebsch_2,clebsch_3,clebsch_4):
+            a = proj_1
+            b = (clebsh_1/clebsch_3) * proj_2
+            c = clebsch_2 - (clebsh_1/clebsch_3)
+            return (a - b) / c
+
+        paired_uncoupled_obritals = [[0,1], [2,3], [4, 5, 6, 7], [8,9,10,11], [12,13,14,15,16,17]]
+        print(float(CG(j1=1/2, m1=-1/2, j2=1/2, m2=+1/2, j3=1, m3=0).doit()))
+
+        uncoupled_projected[:,:,0,:,:] = self.projected[:,:,0,:,:] + self.projected[:,:,1,:,:]
+
+
+        
+        return None
 
 
 def interpolate(x, y, factor=2):

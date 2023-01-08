@@ -38,8 +38,12 @@ release = "5.5.0"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc", "sphinx.ext.mathjax", "sphinx.ext.githubpages",
-    "sphinx.ext.napoleon", 'sphinx.ext.viewcode', 'sphinx_copybutton',
+    "sphinx.ext.autodoc", 
+    "sphinx.ext.mathjax", 
+    "sphinx.ext.githubpages",
+    "sphinx.ext.napoleon", 
+    'sphinx.ext.viewcode', 
+    'sphinx_copybutton',
     'numpydoc'
 ]
 
@@ -60,7 +64,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -75,7 +79,8 @@ pygments_style = "sphinx"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+# import pydata_sphinx_theme
+html_theme = "pydata_sphinx_theme"
 # html_theme_path = ["_themes", ]
 
 # Theme options are theme-specific and customize the look and feel of a theme
