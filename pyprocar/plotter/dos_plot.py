@@ -14,7 +14,7 @@ from ..utils.defaults import settings
 np.seterr(divide="ignore", invalid="ignore")
 
 # TODO add python typing to all of the functions
-
+# TODO Generalize orientation to remove if statments
 class DOSPlot:
     def __init__(self, dos=None, structure=None, ax=None, **kwargs):
         """

@@ -5,13 +5,17 @@ PyProcar
 	:hidden:
 
 	getting-started/index
-	installation
-	developers
-	contributors
-	cite
-	dftprep
-	tutorials
-	modules
+	dftprep/index
+	examples/index
+	api/index
+	
+
+	..developers
+	..contributors
+	..cite
+
+	..tutorials
+	..modules
 
 .. raw:: html
 

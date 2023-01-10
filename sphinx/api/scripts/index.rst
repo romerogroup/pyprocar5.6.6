@@ -1,6 +1,6 @@
-.. _core-api-index:
+.. _script-api-index:
 
-Core API
+Scripts API
 ========
 
 This section contains functions that users can call to plot and use for pre- or post- processing

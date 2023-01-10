@@ -44,8 +44,20 @@ extensions = [
     "sphinx.ext.napoleon", 
     'sphinx.ext.viewcode', 
     'sphinx_copybutton',
+    'sphinx_gallery.gen_gallery',
     'numpydoc'
 ]
+
+# Used to set up examples sections
+sphinx_gallery_conf = {
+    # convert rst to md for ipynb
+    "pypandoc": True,
+    # path to your examples scripts
+    "examples_dirs": ["../examples/"],
+    # path where to save gallery generated examples
+    "gallery_dirs": ["examples"],
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -87,7 +99,21 @@ html_theme = "pydata_sphinx_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "github_url": "https://github.com/romerogroup/pyprocar",
+    "icon_links": [ 
+        {
+            "name": "Contributing",
+            "url": "https://github.com/romerogroup/pyprocar/CONTRIBUTING.rst",
+            "icon": "fa fa-gavel fa-fw",
+        },
+        {
+            "name": "The Paper",
+            "url": "https://doi.org/10.1016/j.cpc.2019.107080",
+            "icon": "fa fa-file-text fa-fw",
+        },
+    ]
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -161,3 +187,6 @@ texinfo_documents = [
 ]
 
 # -- Extension configuration -------------------------------------------------
+
+# skip building the osmnx example if osmnx is not installed
+

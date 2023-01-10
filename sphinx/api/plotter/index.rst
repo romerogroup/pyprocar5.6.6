@@ -1,6 +1,6 @@
-.. _core-api-index:
+.. _plotter-api-index:
 
-Core API
+Plotter API
 ========
 
 This chapter is intended to describe data types that are used to assist in the plotting of density of states and band stucture.
