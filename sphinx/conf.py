@@ -26,7 +26,33 @@ author = "Uthpala Herath"
 # The short X.Y version
 version = ""
 # The full version, including alpha/beta/rc tags
-release = "5.5.0"
+release = "2.0.0"
+
+
+# -- pyvista configuration ---------------------------------------------------
+import pyvista
+
+# Manage errors
+pyvista.set_error_output_file("errors.txt")
+# Ensure that offscreen rendering is used for docs generation
+pyvista.OFF_SCREEN = True  # Not necessary - simply an insurance policy
+# Preferred plotting style for documentation
+pyvista.set_plot_theme("document")
+pyvista.global_theme.window_size = [1024, 768]
+pyvista.global_theme.font.size = 22
+pyvista.global_theme.font.label_size = 22
+pyvista.global_theme.font.title_size = 22
+pyvista.global_theme.return_cpos = False
+# pyvista.set_jupyter_backend(None)
+# Save figures in specified directory
+pyvista.FIGURE_PATH = os.path.join(os.path.abspath("./images/"), "auto-generated/")
+if not os.path.exists(pyvista.FIGURE_PATH):
+    os.makedirs(pyvista.FIGURE_PATH)
+
+# necessary when building the sphinx gallery
+pyvista.BUILDING_GALLERY = True
+os.environ['PYVISTA_BUILDING_GALLERY'] = 'true'
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -38,12 +64,18 @@ release = "5.5.0"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc", 
-    "sphinx.ext.mathjax", 
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
     "sphinx.ext.githubpages",
+    'sphinx.ext.intersphinx',
+    "sphinx.ext.mathjax", 
     "sphinx.ext.napoleon", 
-    'sphinx.ext.viewcode', 
+    'sphinx.ext.viewcode',
+    
     'sphinx_copybutton',
+    'sphinx_design',
     'sphinx_gallery.gen_gallery',
     'numpydoc'
 ]
@@ -56,8 +88,15 @@ sphinx_gallery_conf = {
     "examples_dirs": ["../examples/"],
     # path where to save gallery generated examples
     "gallery_dirs": ["examples"],
+    "doc_module": "pyprocar",
+    "image_scrapers": ("pyvista", "matplotlib"),
 }
 
+
+# See https://numpydoc.readthedocs.io/en/latest/install.html
+numpydoc_use_plots = True
+numpydoc_show_class_members = False
+numpydoc_xref_param_type = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

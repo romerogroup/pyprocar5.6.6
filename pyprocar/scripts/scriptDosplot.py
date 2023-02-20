@@ -4,6 +4,7 @@ __maintainer__ = "Pedram Tavadze and Logan Lang"
 __email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
 __date__ = "March 31, 2020"
 
+import os
 from typing import List, Tuple
 
 import numpy as np
@@ -96,8 +97,7 @@ def dosplot(
 
         e.g. ``orientation='vertical'``
 
-    spin_colors : list str or tuples, (optional ``spin_colors=['blue',
-        'red']``)
+    spin_colors : list str or tuples, (optional ``spin_colors=['blue','red']``)
         **spin_colors** represent the colors the different spin
         ploarizations are going to be represented in the DOS
         plot. These colors can be chosen from any type of color
@@ -107,9 +107,11 @@ def dosplot(
         ``spin_colors=[(0, 0, 1),(1, 0,0 )]``,
         ``spin_colors=['#0000ff','#ff0000']``
 
-        .. caution:: If the calculation is spin polarized one has to
-        provide two colors even if one is plotting one spin. I
-        disregard this cation if using default.
+        .. caution:: 
+        
+            If the calculation is spin polarized one has to
+            provide two colors even if one is plotting one spin. I
+            disregard this cation if using default.
 
     colors : list str or tuples, optional (default, optional)
         ``colors`` defines the color of plots filling the area under
@@ -174,11 +176,16 @@ def dosplot(
         has to be order of the input files of DFT package. The
         following table represents the indecies for different orbitals
         in **VASP**.
+
+        .. code-block::
+            :linenos:
+            
             +-----+-----+----+----+-----+-----+-----+-----+-------+
             |  s  | py  | pz | px | dxy | dyz | dz2 | dxz | x2-y2 |
             +-----+-----+----+----+-----+-----+-----+-----+-------+
             |  0  |  1  |  2 |  3 |  4  |  5  |  6  |  7  |   8   |
             +-----+-----+----+----+-----+-----+-----+-----+-------+
+
         ``orbitals`` is only relavent in ``mode='parametric'``,
         ``mode='parametric_line'``, ``mode='stack_species'``.
 
@@ -326,9 +333,9 @@ def dosplot(
         using this returned object.
         e.g. ::
 
-            >>> fig, ax = pyprocar.dosplot(mode='plain', plt_show=False)
-            >>> ax.set_ylim(-2,2)
-            >>> fig.show()
+        >>> fig, ax = pyprocar.dosplot(mode='plain', plt_show=False)
+        >>> ax.set_ylim(-2,2)
+        >>> fig.show()
 
     """
     
@@ -487,6 +494,11 @@ def parse(code: str='vasp',
         dos = parser.dos
 
     elif code == "vasp":
+        outcar = f"{dirname}{os.sep}OUTCAR"
+        poscar = f"{dirname}{os.sep}POSCAR"
+        procar = f"{dirname}{os.sep}PROCAR"
+        kpoints = f"{dirname}{os.sep}KPOINTS"
+        filename = f"{dirname}{os.sep}{filename}"
         if outcar is not None:
             outcar = io.vasp.Outcar(outcar)
             if fermi is None:
@@ -509,8 +521,7 @@ def parse(code: str='vasp',
         if dirname is None:
             dirname = "dos"
         parser = io.qe.QEParser(dirname = dirname, scf_in_filename = "scf.in", bands_in_filename = "bands.in", 
-                             pdos_in_filename = "pdos.in", kpdos_in_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml", 
-                             dos_interpolation_factor =interpolation_factor)
+                             pdos_in_filename = "pdos.in", kpdos_in_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml")
         if fermi is None:
             fermi = parser.efermi
         
