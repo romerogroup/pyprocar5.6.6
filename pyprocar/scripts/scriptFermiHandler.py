@@ -1,13 +1,13 @@
-__author__ = "Pedram Tavadze and Logan Lang"
-__maintainer__ = "Pedram Tavadze and Logan Lang"
-__email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
+__author__ = "Logan Lang"
+__maintainer__ = "Logan Lang"
+__email__ = "lllang@mix.wvu.edu"
 __date__ = "March 31, 2020"
 
 import sys
 import functools
 import copy
 from typing import List, Tuple
-
+import os
 
 import numpy as np
 from matplotlib import colors as mpcolors
@@ -17,17 +17,12 @@ import vtk
 import pyvista as pv
 from pyvista.utilities import NORMALS, generate_plane, get_array, try_callback
 
-from pyprocar.fermisurface3d import fermisurface3D
+# from pyprocar.fermisurface3d import fermisurface3D
 
-# from .core.surface import boolean_add
-from ..fermisurface3d import FermiSurface3D
+from ..core import FermiSurface3D
 from ..splash import welcome
-from ..utilsprocar import UtilsProcar
-from ..io.procarparser import ProcarParser
-from ..procarselect import ProcarSelect
-from ..io.bxsf import BxsfParser
-from ..io.frmsf import FrmsfParser
-from ..io.qeparser import QEFermiParser
+from ..utils import UtilsProcar
+
 from ..io.lobsterparser import LobsterFermiParser
 from ..io.abinitparser import AbinitParser
 from .. import io
@@ -35,26 +30,32 @@ from .. import io
 np.set_printoptions(threshold=sys.maxsize)
 
 
-
 class FermiHandler:
+
     def __init__(self,
             code:str,
-            procar:str="PROCAR",
-            outcar:str="OUTCAR",
-            poscar:str="POSCAR",
             dirname:str="",
-            infile:str="in.bxsf",
-            abinit_output:str=None,
             repair:bool=False,
             apply_symmetry:bool=True,
         ):
+        """
+        This class handles the plotting of the fermi surface. Initialize by specifying the code and directory name where the data is stored. 
+        Then call one of the plotting methods provided.
+
+        Parameters
+        ----------
+        code : str
+            The code name
+        dirname : str, optional
+            the directory name where the calculation is, by default ""
+        repair : bool, optional
+            Boolean to repair the PROCAR file, by default False
+        apply_symmetry : bool, optional
+            Boolean to apply symmetry to the fermi sruface.
+            This is used when only symmetry reduced kpoints used in the calculation, by default True
+        """
         self.code = code
-        self.procar=procar
-        self.poscar=poscar
-        self.outcar=outcar
         self.dirname=dirname
-        self.infile=infile
-        self.abinit_output=abinit_output
         self.repair = repair
         self.apply_symmetry = apply_symmetry
 
@@ -84,7 +85,8 @@ class FermiHandler:
                         # plotting saving options
                         plot_brillouin_zone:bool=True,
                         arrow_color: List[str] or List[Tuple[float,float,float]]=None,
-                        arrow_size: float=0.015,
+                        arrow_size: float=0.1,
+                        spin_colors: List[str] or List[Tuple[float,float,float]]=None,
                         colors: List[str] or List[Tuple[float,float,float]]=None,
                         cmap:str="jet",
                         vmin:float=0,
@@ -92,14 +94,91 @@ class FermiHandler:
 
                         # saving options
                         show:bool=True,
+                        plot_directional_arrows:bool=True,
                         camera_pos:List[float]=[1, 1, 1],
                         background_color:str or Tuple[float,float,float,float]="white",
                         perspective:bool=True,
-                        save_2d:bool=None,
+                        save_2d:str=None,
                         save_gif:str=None,
                         save_mp4:str=None,
                         save_3d:str=None
         ):
+        """A method to plot the 3d fermi surface
+
+        Parameters
+        ----------
+        mode : str
+            The mode to calculate
+        bands : List[int], optional
+            A list of band indexes to plot, by default None
+        atoms : List[int], optional
+            A list of atoms, by default None
+        orbitals : List[int], optional
+            A list of orbitals, by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        fermi : float, optional
+            Ther fermi energy, by default None
+        fermi_shift : float, optional
+            A float to shift the fermi energy, by default 0
+        fermi_tolerance : float, optional
+            The fermi tolerance. This will allow more bands when searching for isosurfaces, by default 0.1
+        spin_texture : bool, optional
+            Boolean to plot spin texture, by default False
+        calculate_fermi_speed : bool, optional
+            Boolean to calculate the fermi speed, by default False
+        calculate_fermi_velocity : bool, optional
+            Boolean to calculate the fermi velocity, by default False
+        calculate_effective_mass : bool, optional
+            Boolean to calculate the effective mass, by default False
+        supercell : List[int], optional
+            A list of integers for the supercell to include, by default [1, 1, 1]
+        extended_zone_directions : List[List[int] or Tuple[int,int,int]], optional
+            A list of list that describe the directions to expand the fermi surface, by default None
+        interpolation_factor : int, optional
+            The interpolation factor, by default 1
+        projection_accuracy : str, optional
+            String for the projection method to use, by default "normal"
+        plot_brillouin_zone : bool, optional
+            Boolean to plot the Brillouin zone, by default True
+        arrow_color : List[str]orList[Tuple[float,float,float]], optional
+            The arrow colors, by default None
+        arrow_size : float, optional
+            The arrow size, by default 0.1
+        spin_colors : List[str]orList[Tuple[float,float,float]], optional
+            The spin colors, by default None
+        colors : List[str]orList[Tuple[float,float,float]], optional
+            The colors of the fermi surface bands, by default None
+        cmap : str, optional
+            The colormap to use, by default "jet"
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None, by default None, by default 0
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None, by default None, by default 1
+        show : bool, optional
+            Boollean to show the plot, by default True
+        plot_directional_arrows : bool, optional
+            Boolean to include direction arrows, by default True
+        camera_pos : List[float], optional
+            The camera position, by default [1, 1, 1]
+        background_color : strorTuple[float,float,float,float], optional
+            The background color of the plot, by default "white"
+        perspective : bool, optional
+            Boolean , by default True
+        save_2d : str, optional
+            String to save a screenshot, by default None
+        save_gif : str, optional
+            String to save an orbiting .gif file, by default None
+        save_mp4 : str, optional
+            String to save an orbiting .mp4 file, by default None
+        save_3d : str, optional
+            String to save ther fermisurface as a 3d object, by default None
+
+        Returns
+        -------
+        None
+            None
+        """
         ################################################################
         # Initialize the Fermi Surface 
         ################################################################
@@ -112,7 +191,8 @@ class FermiHandler:
             calculate_fermi_velocity==False): 
             raise Exception("Turn one property (calculate_fermi_speed,calculate_fermi_velocity,calculate_effective_mass) to True")
 
-        spd, spd_spin, bands_to_keep = self.__format_data(
+       
+        spd, spd_spin, bands_to_keep,spins = self.__format_data(
                                                         mode=mode,
                                                         bands=bands,
                                                         atoms=atoms,
@@ -120,28 +200,59 @@ class FermiHandler:
                                                         spins=spins,
                                                         spin_texture=spin_texture,
                                                         fermi_tolerance=fermi_tolerance)
-        fermi_surface3D = FermiSurface3D(
-                                        kpoints=self.parser.ebs.kpoints,
-                                        bands=self.parser.ebs.bands,
-                                        bands_to_keep = bands_to_keep,
-                                        spd=spd,
-                                        spd_spin=spd_spin,
-                                        colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
-                                        fermi=self.e_fermi,
-                                        fermi_shift = fermi_shift,
-                                        fermi_tolerance=fermi_tolerance,
-                                        reciprocal_lattice=self.reciprocal_lattice,
-                                        interpolation_factor=interpolation_factor,
-                                        projection_accuracy=projection_accuracy,
-                                        supercell=supercell,
-                                        cmap=cmap,
-                                        vmin = vmin,
-                                        vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
-                                    )
+        fermi_surfaces = []
+        for ispin, spin in enumerate(spins):
+            if spin_colors:
+                surface_color = spin_colors[ispin]
+            else:
+                surface_color = None
+            fermi_surface3D = FermiSurface3D(
+                                            kpoints=self.parser.ebs.kpoints,
+                                            bands=self.parser.ebs.bands[:,:,spin],
+                                            bands_to_keep = bands_to_keep,
+                                            spd=spd[:,:,ispin],
+                                            spd_spin=spd_spin,
+                                            colors = colors,
+                                            surface_color=surface_color,
+                                            fermi=self.e_fermi,
+                                            fermi_shift = fermi_shift,
+                                            fermi_tolerance=fermi_tolerance,
+                                            reciprocal_lattice=self.reciprocal_lattice,
+                                            interpolation_factor=interpolation_factor,
+                                            projection_accuracy=projection_accuracy,
+                                            supercell=supercell,
+                                            cmap=cmap,
+                                            vmin=vmin,
+                                            vmax=vmax,
+                                        )
+
+            if calculate_fermi_speed:
+                fermi_surface3D.calculate_fermi_speed()
+            elif calculate_fermi_velocity:
+                fermi_surface3D.calculate_fermi_velocity()
+            elif calculate_effective_mass:
+                fermi_surface3D.calculate_effective_mass()
+
+            if mode =='parametric':
+                fermi_surface3D.project_atomic_projections()
+
+            if mode =='spin_texture':
+                fermi_surface3D.project_spin_texture_atomic_projections()
+
+            if extended_zone_directions:
+                fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
+            fermi_surfaces.append(fermi_surface3D)
+
+        fermi_surface=None
+        for i,surface in enumerate(fermi_surfaces):
+            if i == 0:
+                fermi_surface=surface
+            else:
+                fermi_surface+=surface
+
+
+        
+
 
         ################################################################
         # Initialize the Plotter
@@ -164,14 +275,14 @@ class FermiHandler:
                                                 calculate_effective_mass=calculate_effective_mass)
 
         # Adding meshes
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+        if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
             arrows = fermi_surface3D.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
             if arrow_color is None:
                 plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False)
             else:
                 plotter.add_mesh(arrows, color=arrow_color,show_scalar_bar=False)
 
-        plotter.add_mesh(fermi_surface3D,
+        plotter.add_mesh(fermi_surface,
                         scalars =  options_dict['scalars'], 
                         cmap=cmap,
                         show_scalar_bar=False,
@@ -190,12 +301,15 @@ class FermiHandler:
                 position_y=0.01,
                 color="black",)
 
+
         # Other plotting options
-        plotter.add_axes(
-            xlabel="Kx", 
-            ylabel="Ky", 
-            zlabel="Kz", 
-            line_width=6, 
+        if plot_directional_arrows:
+            plotter.add_axes(
+                xlabel="Kx", 
+                ylabel="Ky", 
+                zlabel="Kz", 
+                line_width=6,
+                color='black',
             labels_off=False)
 
         if not perspective:
@@ -208,11 +322,11 @@ class FermiHandler:
         if save_gif is not None:
             path = plotter.generate_orbital_path(n_points=36)
             plotter.open_gif(save_gif)
-            plotter.orbit_on_path(path) 
+            plotter.orbit_on_path(path, write_frames=True, viewup=[0, 0, 1], step=0.05)
         if save_mp4:
             path = plotter.generate_orbital_path(n_points=36)
             plotter.open_movie(save_mp4)
-            plotter.orbit_on_path(path) 
+            plotter.orbit_on_path(path, write_frames=True, viewup=[0, 0, 1], step=0.05)
 
         if save_3d:
             plotter.save_meshio(save_3d,  fermi_surface3D)
@@ -248,22 +362,103 @@ class FermiHandler:
                         arrow_color: List[str] or List[Tuple[float,float,float]]=None,
                         arrow_size: float=0.015,
                         colors: List[str] or List[Tuple[float,float,float]]=None,
+                        spin_colors: List[str] or List[Tuple[float,float,float]]=None,
                         cmap:str="jet",
                         vmin:float=0,
                         vmax:float=1,
 
                         # saving options
                         show:bool=True,
+                        plot_directional_arrows:bool=True,
                         camera_pos:List[float]=[1, 1, 1],
                         background_color:str or Tuple[float,float,float,float]="white",
                         perspective:bool=True,
-                        save_2d:bool=None,
+                        save_2d:str=None,
         ):
+        """A method to plot a fermi surface with an isoslider widget
+
+        Parameters
+        ----------
+        mode : str
+            The mode name
+        iso_range : float
+            A range of energies the slide will go through
+        iso_surfaces : int
+            Ther number of fermi sruface to calculate on the range
+        bands : List[int], optional
+            A list of bands to plot, by default None
+        atoms : List[int], optional
+            A list of atoms, by default None
+        orbitals : List[int], optional
+            A list of orbitals, by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        fermi : float, optional
+            Ther fermi energy, by default None
+        fermi_shift : float, optional
+            A float to shift the fermi energy, by default 0
+        fermi_tolerance : float, optional
+            The fermi tolerance. This will allow more bands when searching for isosurfaces, by default 0.1
+        spin_texture : bool, optional
+            Boolean to plot spin texture, by default False
+        calculate_fermi_speed : bool, optional
+            Boolean to calculate the fermi speed, by default False
+        calculate_fermi_velocity : bool, optional
+            Boolean to calculate the fermi velocity, by default False
+        calculate_effective_mass : bool, optional
+            Boolean to calculate the effective mass, by default False
+        supercell : List[int], optional
+            A list of integers for the supercell to include, by default [1, 1, 1]
+        extended_zone_directions : List[List[int] or Tuple[int,int,int]], optional
+            A list of list that describe the directions to expand the fermi surface, by default None
+        interpolation_factor : int, optional
+            The interpolation factor, by default 1
+        projection_accuracy : str, optional
+            String for the projection method to use, by default "normal"
+        plot_brillouin_zone : bool, optional
+            Boolean to plot the Brillouin zone, by default True
+        arrow_color : List[str]orList[Tuple[float,float,float]], optional
+            The arrow colors, by default None
+        arrow_size : float, optional
+            The arrow size, by default 0.1
+        spin_colors : List[str]orList[Tuple[float,float,float]], optional
+            The spin colors, by default None
+        colors : List[str]orList[Tuple[float,float,float]], optional
+            The colors of the fermi surface bands, by default None
+        cmap : str, optional
+            The colormap to use, by default "jet"
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None, by default None, by default 0
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None, by default None, by default 1
+        show : bool, optional
+            Boolean to show the plot, by default True
+        plot_directional_arrows : bool, optional
+            Boolean to plot direction arrows, by default True
+        camera_pos : List[float], optional
+            List to specify the camera position, by default [1, 1, 1]
+        background_color : strorTuple[float,float,float,float], optional
+            The background color of the plot, by default "white"
+        perspective : bool, optional
+            Boolean, by default True
+        save_2d : str, optional
+            String to save a screenshot fo the plotter, by default None
+
+        Returns
+        -------
+        _type_
+            _description_
+
+        Raises
+        ------
+        Exception
+            _description_
+        """
         ################################################################
         # callback function for the isoslider
         ################################################################
         def create_mesh(plotter:pv.Plotter,
-                        value:float, 
+                        value:float,
                         ):
             res = int(value)
             closest_idx = find_nearest(energy_values, res)
@@ -271,11 +466,15 @@ class FermiHandler:
                                                 calculate_fermi_speed=calculate_fermi_speed,
                                                 calculate_fermi_velocity=calculate_fermi_velocity,
                                                 calculate_effective_mass=calculate_effective_mass)
-
-            plotter.add_mesh(e_surfaces[closest_idx], 
+            
+                
+            plotter.add_mesh(e_surfaces[closest_idx],
+                            scalars =  options_dict['scalars'], 
                             name='iso_surface', 
-                            scalars = options_dict['scalars'], 
-                            show_scalar_bar=False)
+                            cmap=cmap,
+                            show_scalar_bar=False,
+                            rgba=options_dict['use_rgba'])
+
 
             if mode != "plain" or spin_texture:
                 plotter.add_scalar_bar(
@@ -289,8 +488,9 @@ class FermiHandler:
                     position_y=0.01,
                     color="black",)
             
-            if options_dict['scalars'] == "spin" or options_dict['scalars'] == "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] == "spin_magnitude" or options_dict['scalars'] == "Fermi Velocity Vector_magnitude":
                 if arrow_color is None:
+                    
                     arrows=e_surfaces[closest_idx].glyph(
                                                         orient=options_dict['vector_name'], 
                                                         scale=False ,
@@ -300,9 +500,7 @@ class FermiHandler:
                     arrow_actor = [value for key, value in plotter.renderer.actors.items() if 'PolyData' in key]
                     if len(arrow_actor) != 0:
                         plotter.remove_actor(arrow_actor[0])
-                    
                     plotter.add_mesh(arrows, 
-                                    scalars = options_dict['scalars'],
                                     cmap=cmap,
                                     show_scalar_bar=False)
                 else:
@@ -320,7 +518,7 @@ class FermiHandler:
         if mode == 'property_projection' and calculate_effective_mass== False and calculate_fermi_speed==False and calculate_fermi_velocity==False: 
             raise Exception("Turn one property (calculate_fermi_speed,calculate_fermi_velocity,calculate_effective_mass) to True")
 
-        spd, spd_spin, bands_to_keep = self.__format_data(
+        spd, spd_spin, bands_to_keep,spins = self.__format_data(
                                                         mode=mode,
                                                         bands=bands,
                                                         atoms=atoms,
@@ -331,34 +529,61 @@ class FermiHandler:
 
         energy_values = np.linspace(self.e_fermi-iso_range/2,self.e_fermi+iso_range/2,iso_surfaces)
         e_surfaces = []
-        
         for e_value in energy_values:
-            fermi_surface3D = FermiSurface3D(
-                                        kpoints=self.parser.ebs.kpoints,
-                                        bands=self.parser.ebs.bands,
-                                        bands_to_keep = bands_to_keep,
-                                        spd=spd,
-                                        spd_spin=spd_spin,
-                                        colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
-                                        fermi=e_value,
-                                        fermi_shift = fermi_shift,
-                                        fermi_tolerance=fermi_tolerance,
-                                        reciprocal_lattice=self.reciprocal_lattice,
-                                        interpolation_factor=interpolation_factor,
-                                        projection_accuracy=projection_accuracy,
-                                        supercell=supercell,
-                                        cmap=cmap,
-                                        vmin = vmin,
-                                        vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
-                                    )
-            brillouin_zone = fermi_surface3D.brillouin_zone
-            e_surfaces.append(fermi_surface3D)
-        
-  
+            fermi_surfaces = []
+            for ispin, spin in enumerate(spins):
+                if spin_colors:
+                    surface_color = spin_colors[ispin]
+                else:
+                    surface_color = None
+                fermi_surface3D = FermiSurface3D(
+                                            kpoints=self.parser.ebs.kpoints,
+                                            bands=self.parser.ebs.bands[:,:,spin],
+                                            bands_to_keep = bands_to_keep,
+                                            spd=spd[:,:,ispin],
+                                            spd_spin=spd_spin,
+                                            colors = colors,
+                                            surface_color=surface_color,
+                                            fermi=e_value,
+                                            fermi_shift = fermi_shift,
+                                            fermi_tolerance=fermi_tolerance,
+                                            reciprocal_lattice=self.reciprocal_lattice,
+                                            interpolation_factor=interpolation_factor,
+                                            projection_accuracy=projection_accuracy,
+                                            supercell=supercell,
+                                            cmap=cmap,
+                                            vmin = vmin,
+                                            vmax=vmax,
+                                        )
+                if calculate_fermi_speed:
+                    fermi_surface3D.calculate_fermi_speed()
+                elif calculate_fermi_velocity:
+                    fermi_surface3D.calculate_fermi_velocity()
+                elif calculate_effective_mass:
+                    fermi_surface3D.calculate_effective_mass()
+
+                if mode =='parametric':
+                    fermi_surface3D.project_atomic_projections()
+
+                if mode =='spin_texture':
+                    fermi_surface3D.project_spin_texture_atomic_projections()
+
+                if extended_zone_directions:
+                    fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
+
+                brillouin_zone = fermi_surface3D.brillouin_zone
+                fermi_surfaces.append(fermi_surface3D)
+
+            total_surface =None
+            for i, surface in enumerate(fermi_surfaces):
+                if i == 0:
+                    total_surface  = surface
+                else:
+                    total_surface += surface
+
+            e_surfaces.append(total_surface)
+
+
         ################################################################
         # Initialize the Plotter
         ################################################################
@@ -376,11 +601,13 @@ class FermiHandler:
                                 title='Energy iso-value',
                                 style='modern',
                                 color = 'black')
-        plotter.add_axes(
-            xlabel="Kx", 
-            ylabel="Ky", 
-            zlabel="Kz", 
-            line_width=6, 
+        if plot_directional_arrows:
+            plotter.add_axes(
+                xlabel="Kx", 
+                ylabel="Ky", 
+                zlabel="Kz",
+                color='black',
+                line_width=6, 
             labels_off=False)
 
         if not perspective:
@@ -422,23 +649,95 @@ class FermiHandler:
                         arrow_color: List[str] or List[Tuple[float,float,float]]=None,
                         arrow_size: float=0.015,
                         colors: List[str] or List[Tuple[float,float,float]]=None,
+                        spin_colors: List[str] or List[Tuple[float,float,float]]=None,
                         cmap:str="jet",
                         vmin:float=0,
                         vmax:float=1,
 
                         # saving options
+                        plot_directional_arrows:bool=True,
                         camera_pos:List[float]=[1, 1, 1],
                         background_color:str or Tuple[float,float,float,float]="white",
                         save_gif:str=None,
 
         ):
+        """A method to genrate a gif that changes the isovlaue
+
+        Parameters
+        ----------
+        mode : str
+            The mode name
+        iso_range : float, optional
+            The energy range, by default 3
+        iso_surfaces : int, optional
+            The number of surface to generate in the range, by default 10
+        iso_values : List[float], optional
+            Excat energy values, by default None
+        bands : List[int], optional
+            A list of bands to plot, by default None
+        atoms : List[int], optional
+            A list of atoms, by default None
+        orbitals : List[int], optional
+            A list of orbitals, by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        fermi : float, optional
+            Ther fermi energy, by default None
+        fermi_shift : float, optional
+            A float to shift the fermi energy, by default 0
+        fermi_tolerance : float, optional
+            The fermi tolerance. This will allow more bands when searching for isosurfaces, by default 0.1
+        spin_texture : bool, optional
+            Boolean to plot spin texture, by default False
+        calculate_fermi_speed : bool, optional
+            Boolean to calculate the fermi speed, by default False
+        calculate_fermi_velocity : bool, optional
+            Boolean to calculate the fermi velocity, by default False
+        calculate_effective_mass : bool, optional
+            Boolean to calculate the effective mass, by default False
+        supercell : List[int], optional
+            A list of integers for the supercell to include, by default [1, 1, 1]
+        extended_zone_directions : List[List[int] or Tuple[int,int,int]], optional
+            A list of list that describe the directions to expand the fermi surface, by default None
+        interpolation_factor : int, optional
+            The interpolation factor, by default 1
+        projection_accuracy : str, optional
+            String for the projection method to use, by default "normal"
+        plot_brillouin_zone : bool, optional
+            Boolean to plot the Brillouin zone, by default True
+        arrow_color : List[str]orList[Tuple[float,float,float]], optional
+            The arrow colors, by default None
+        arrow_size : float, optional
+            The arrow size, by default 0.1
+        spin_colors : List[str]orList[Tuple[float,float,float]], optional
+            The spin colors, by default None
+        colors : List[str]orList[Tuple[float,float,float]], optional
+            The colors of the fermi surface bands, by default None
+        cmap : str, optional
+            The colormap to use, by default "jet"
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None, by default None, by default 0
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None, by default None, by default 1
+        show : bool, optional
+            Boolean to show the plot, by default True
+        plot_directional_arrows : bool, optional
+            Boolean to plot direction arrows, by default True
+        camera_pos : List[float], optional
+            List to specify the camera position, by default [1, 1, 1]
+        background_color : strorTuple[float,float,float,float], optional
+            The background color of the plot, by default "white"
+        save_gif : str, optional
+            String to save the gif, by default None
+
+        """
         if fermi is not None:
             self.e_fermi = None
 
         if mode == 'property_projection' and calculate_effective_mass== False and calculate_fermi_speed==False and calculate_fermi_velocity==False: 
             raise Exception("Turn one property (calculate_fermi_speed,calculate_fermi_velocity,calculate_effective_mass) to True")
 
-        spd, spd_spin, bands_to_keep = self.__format_data(
+        spd, spd_spin, bands_to_keep,spins = self.__format_data(
                                                         mode=mode,
                                                         bands=bands,
                                                         atoms=atoms,
@@ -454,34 +753,55 @@ class FermiHandler:
 
         
         for e_value in energy_values:
-            fermi_surface3D = FermiSurface3D(
-                                        kpoints=self.parser.ebs.kpoints,
-                                        bands=self.parser.ebs.bands,
-                                        bands_to_keep = bands_to_keep,
-                                        spd=spd,
-                                        spd_spin=spd_spin,
-                                        colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
-                                        fermi=e_value,
-                                        fermi_shift = fermi_shift,
-                                        fermi_tolerance=fermi_tolerance,
-                                        reciprocal_lattice=self.reciprocal_lattice,
-                                        interpolation_factor=interpolation_factor,
-                                        projection_accuracy=projection_accuracy,
-                                        supercell=supercell,
-                                        cmap=cmap,
-                                        vmin = vmin,
-                                        vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
-                                    )
-            brillouin_zone = fermi_surface3D.brillouin_zone
-            e_surfaces.append(fermi_surface3D)
+            fermi_surfaces = []
+            for ispin, spin in enumerate(spins):
+                if spin_colors:
+                    surface_color = spin_colors[ispin]
+                else:
+                    surface_color = None
+                fermi_surface3D = FermiSurface3D(
+                                            kpoints=self.parser.ebs.kpoints,
+                                            bands=self.parser.ebs.bands[:,:,spin],
+                                            bands_to_keep = bands_to_keep,
+                                            spd=spd[:,:,ispin],
+                                            spd_spin=spd_spin,
+                                            colors = colors,
+                                            surface_color=surface_color,
+                                            fermi=e_value,
+                                            fermi_shift = fermi_shift,
+                                            fermi_tolerance=fermi_tolerance,
+                                            reciprocal_lattice=self.reciprocal_lattice,
+                                            interpolation_factor=interpolation_factor,
+                                            projection_accuracy=projection_accuracy,
+                                            supercell=supercell,
+                                            cmap=cmap,
+                                            vmin = vmin,
+                                            vmax=vmax,
+                                        )
+                if calculate_fermi_speed:
+                    fermi_surface3D.calculate_fermi_speed()
+                elif calculate_fermi_velocity:
+                    fermi_surface3D.calculate_fermi_velocity()
+                elif calculate_effective_mass:
+                    fermi_surface3D.calculate_effective_mass()
+                if mode =='parametric':
+                    fermi_surface3D.project_atomic_projections()
+                if mode =='spin_texture':
+                    fermi_surface3D.project_spin_texture_atomic_projections()
+                if extended_zone_directions:
+                    fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
 
+                brillouin_zone = fermi_surface3D.brillouin_zone
+                fermi_surfaces.append(fermi_surface3D)
 
-        
-        
+            total_surface =None
+            for i, surface in enumerate(fermi_surfaces):
+                if i == 0:
+                    total_surface  = surface
+                else:
+                    total_surface += surface
+            e_surfaces.append(total_surface)
+
         plotter = pv.Plotter(off_screen=True)
         plotter.open_gif(save_gif)
 
@@ -504,7 +824,7 @@ class FermiHandler:
                                                 calculate_effective_mass=calculate_effective_mass)
  
         # Adding meshes
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+        if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
             arrows = fermi_surface3D.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
             if arrow_color is None:
                 plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False)
@@ -531,11 +851,13 @@ class FermiHandler:
 
         plotter.add_text(f'Energy Value : {initial_e_value:.4f} eV', color = 'black')
 
-        plotter.add_axes(
-            xlabel="Kx", 
-            ylabel="Ky", 
-            zlabel="Kz", 
-            line_width=6, 
+        if plot_directional_arrows:
+            plotter.add_axes(
+                xlabel="Kx", 
+                ylabel="Ky", 
+                zlabel="Kz",
+                color='black',
+                line_width=6, 
             labels_off=False)
 
         plotter.show(auto_close=False)
@@ -543,7 +865,7 @@ class FermiHandler:
         # Run through each frame
         for e_surface,evalues in zip(e_surfaces,energy_values):
             surface.overwrite(e_surface)
-            if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
                 e_arrows = e_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
                 arrows.overwrite(e_arrows)
             text = f'Energy Value : {evalues:.4f} eV'
@@ -553,7 +875,7 @@ class FermiHandler:
         # Run backward through each frame
         for e_surface, evalues in zip(e_surfaces[::-1],energy_values[::-1]):
             surface.overwrite(e_surface)
-            if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
+            if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
                 e_arrows = e_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
                 arrows.overwrite(e_arrows)
             plotter.write_frame()
@@ -564,7 +886,7 @@ class FermiHandler:
 
     def plot_fermi_cross_section(self,
                                 mode:str,
-                                show_cross_section_area:bool=True,
+                                show_cross_section_area:bool=False,
                                 slice_normal: Tuple[float,float,float]=(1,0,0),
                                 slice_origin: Tuple[float,float,float]=(0,0,0),
                                 line_width:float=5.0,
@@ -589,9 +911,10 @@ class FermiHandler:
 
                                 # plotting saving options
                                 plot_brillouin_zone:bool=True,
-                                arrow_color: List[str] or List[Tuple[float,float,float]]=None,
+                                arrow_color: str or List[Tuple[float,float,float]]=None,
                                 arrow_size: float=0.015,
                                 colors: List[str] or List[Tuple[float,float,float]]=None,
+                                spin_colors: List[str] or List[Tuple[float,float,float]]=None,
                                 cmap:str="jet",
                                 vmin:float=0,
                                 vmax:float=1,
@@ -599,13 +922,88 @@ class FermiHandler:
                                 # saving options
                                 show:bool=True,
                                 camera_pos:List[float]=[1, 1, 1],
+                                plot_directional_arrows:bool=True,
                                 background_color:str or Tuple[float,float,float,float]="white",
                                 perspective:bool=True,
-                                save_2d:bool=None,
-                                save_gif:str=None,
-                                save_mp4:str=None,
-                                save_3d:str=None
+                                save_2d:str=None,
+                                save_2d_slice:str=None,
         ):
+        """A method to plot the fermi sruafce with a cross section widget
+
+        Parameters
+        ----------
+        mode : str
+            The mode name
+        show_cross_section_area : bool, optional
+            Boolean to show the cross section area, by default False
+        slice_normal : Tuple[float,float,float], optional
+            The initial slice noraml direction, by default (1,0,0)
+        slice_origin : Tuple[float,float,float], optional
+            The initial slice origin, by default (0,0,0)
+        line_width : float, optional
+            The linwidth of the slice, by default 5.0
+        bands : List[int], optional
+            A list of bands to plot, by default None
+        atoms : List[int], optional
+            A list of atoms, by default None
+        orbitals : List[int], optional
+            A list of orbitals, by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        fermi : float, optional
+            Ther fermi energy, by default None
+        fermi_shift : float, optional
+            A float to shift the fermi energy, by default 0
+        fermi_tolerance : float, optional
+            The fermi tolerance. This will allow more bands when searching for isosurfaces, by default 0.1
+        spin_texture : bool, optional
+            Boolean to plot spin texture, by default False
+        calculate_fermi_speed : bool, optional
+            Boolean to calculate the fermi speed, by default False
+        calculate_fermi_velocity : bool, optional
+            Boolean to calculate the fermi velocity, by default False
+        calculate_effective_mass : bool, optional
+            Boolean to calculate the effective mass, by default False
+        supercell : List[int], optional
+            A list of integers for the supercell to include, by default [1, 1, 1]
+        extended_zone_directions : List[List[int] or Tuple[int,int,int]], optional
+            A list of list that describe the directions to expand the fermi surface, by default None
+        interpolation_factor : int, optional
+            The interpolation factor, by default 1
+        projection_accuracy : str, optional
+            String for the projection method to use, by default "normal"
+        plot_brillouin_zone : bool, optional
+            Boolean to plot the Brillouin zone, by default True
+        arrow_color : List[str]orList[Tuple[float,float,float]], optional
+            The arrow colors, by default None
+        arrow_size : float, optional
+            The arrow size, by default 0.1
+        spin_colors : List[str]orList[Tuple[float,float,float]], optional
+            The spin colors, by default None
+        colors : List[str]orList[Tuple[float,float,float]], optional
+            The colors of the fermi surface bands, by default None
+        cmap : str, optional
+            The colormap to use, by default "jet"
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None, by default None, by default 0
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None, by default None, by default 1
+        show : bool, optional
+            Boolean to show the plot, by default True
+        plot_directional_arrows : bool, optional
+            Boolean to plot direction arrows, by default True
+        camera_pos : List[float], optional
+            List to specify the camera position, by default [1, 1, 1]
+        background_color : strorTuple[float,float,float,float], optional
+            The background color of the plot, by default "white"
+        perspective : bool, optional
+            Boolean, by default True
+        save_2d : str, optional
+            String to save a screenshot of the plotter, by default None
+        save_2d_slice : str, optional
+            String to save the 2d slice when done with the plotter, by default None
+
+        """
 
         ################################################################
         # Initialize the Fermi Surface 
@@ -616,7 +1014,7 @@ class FermiHandler:
         if mode == 'property_projection' and calculate_effective_mass== False and calculate_fermi_speed==False and calculate_fermi_velocity==False: 
             raise Exception("Turn one property (calculate_fermi_speed,calculate_fermi_velocity,calculate_effective_mass) to True")
 
-        spd, spd_spin, bands_to_keep = self.__format_data(
+        spd, spd_spin, bands_to_keep, spins = self.__format_data(
                                                         mode=mode,
                                                         bands=bands,
                                                         atoms=atoms,
@@ -624,29 +1022,52 @@ class FermiHandler:
                                                         spins=spins,
                                                         spin_texture=spin_texture,
                                                         fermi_tolerance=fermi_tolerance)
+        fermi_surfaces = []
+        for ispin, spin in enumerate(spins):
+            if spin_colors:
+                surface_color = spin_colors[ispin]
+            else:
+                surface_color = None
+            fermi_surface3D = FermiSurface3D(
+                                            kpoints=self.parser.ebs.kpoints,
+                                            bands=self.parser.ebs.bands[:,:,spin],
+                                            bands_to_keep = bands_to_keep,
+                                            spd=spd[:,:,ispin],
+                                            spd_spin=spd_spin,
+                                            colors = colors,
+                                            surface_color=surface_color,
+                                            fermi=self.e_fermi,
+                                            fermi_shift = fermi_shift,
+                                            fermi_tolerance=fermi_tolerance,
+                                            reciprocal_lattice=self.reciprocal_lattice,
+                                            interpolation_factor=interpolation_factor,
+                                            projection_accuracy=projection_accuracy,
+                                            supercell=supercell,
+                                            cmap=cmap,
+                                            vmin = vmin,
+                                            vmax=vmax,
+                                        )
+            if calculate_fermi_speed:
+                fermi_surface3D.calculate_fermi_speed()
+            elif calculate_fermi_velocity:
+                fermi_surface3D.calculate_fermi_velocity()
+            elif calculate_effective_mass:
+                fermi_surface3D.calculate_effective_mass()
+            if mode =='parametric':
+                fermi_surface3D.project_atomic_projections()
+            if mode =='spin_texture':
+                fermi_surface3D.project_spin_texture_atomic_projections()
 
-        fermi_surface3D = FermiSurface3D(
-                                        kpoints=self.parser.ebs.kpoints,
-                                        bands=self.parser.ebs.bands,
-                                        bands_to_keep = bands_to_keep,
-                                        spd=spd,
-                                        spd_spin=spd_spin,
-                                        colors = colors,
-                                        calculate_fermi_speed = calculate_fermi_speed,
-                                        calculate_fermi_velocity = calculate_fermi_velocity,
-                                        calculate_effective_mass = calculate_effective_mass,
-                                        fermi=self.e_fermi,
-                                        fermi_shift = fermi_shift,
-                                        fermi_tolerance=fermi_tolerance,
-                                        reciprocal_lattice=self.reciprocal_lattice,
-                                        interpolation_factor=interpolation_factor,
-                                        projection_accuracy=projection_accuracy,
-                                        supercell=supercell,
-                                        cmap=cmap,
-                                        vmin = vmin,
-                                        vmax=vmax,
-                                        extended_zone_directions = extended_zone_directions,
-                                    )
+            if extended_zone_directions:
+                fermi_surface3D.extend_surface(extended_zone_directions=extended_zone_directions)
+            fermi_surfaces.append(fermi_surface3D)
+
+        fermi_surface=None
+        for i,surface in enumerate(fermi_surfaces):
+            if i == 0:
+                fermi_surface=surface
+            else:
+                fermi_surface+=surface
 
         ################################################################
         # Initialize the plotter
@@ -667,31 +1088,25 @@ class FermiHandler:
                                                 calculate_fermi_velocity=calculate_fermi_velocity,
                                                 calculate_effective_mass=calculate_effective_mass)
 
-        if options_dict['scalars'] ==  "spin" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
-            raise Exception("Slices do not work for vectors")
+        # if options_dict['scalars'] ==  "spin_magnitude" or options_dict['scalars'] ==  "Fermi Velocity Vector_magnitude":
 
-
-        if show_cross_section_area == True and bands != None:
-            if len(bands) == 1 and bands is not None:
-                add_custom_mesh_slice(plotter = plotter, 
-                                mesh=fermi_surface3D,
-                                options_dict=options_dict,
-                                show_cross_section_area=show_cross_section_area,
-                                line_width=line_width,
-                                normal =slice_normal,
-                                origin = slice_origin, 
-                                scalars = options_dict['scalars'])
-            else:
-                message = f"You must only select one band when reading the cross section area. Bands near Fermi : {self.band_near_fermi}"
-                raise Exception(message)
-        else:
-            add_custom_mesh_slice(plotter = plotter, 
-                                mesh=fermi_surface3D,
+        #     arrows = fermi_surface.glyph(orient=options_dict['vector_name'],scale=False ,factor=arrow_size)
+        #     tot_surface = fermi_surface + arrows
+        #     # options_dict['scalars'] = 'spin_magnitude'
+        # else:
+        #     tot_surface= fermi_surface
+        # if arrow_color:
+        #     options_dict['scalars']= None
+        tot_surface= fermi_surface
+        add_custom_mesh_slice(plotter = plotter, 
+                                mesh=tot_surface,
                                 options_dict=options_dict, 
                                 show_cross_section_area=show_cross_section_area,
                                 line_width=line_width,
                                 normal=slice_normal, 
-                                origin = slice_origin,  
+                                origin = slice_origin,
+                                cmap=cmap,
+                                arrow_color=arrow_color,
                                 scalars = options_dict['scalars'])
 
         if mode != "plain" or spin_texture:
@@ -706,24 +1121,45 @@ class FermiHandler:
                 position_y=0.01,
                 color="black",)
 
-        plotter.add_axes(
-            xlabel="Kx", 
-            ylabel="Ky", 
-            zlabel="Kz", 
-            line_width=6, 
+        if plot_directional_arrows:
+            plotter.add_axes(
+                xlabel="Kx", 
+                ylabel="Ky", 
+                zlabel="Kz", 
+                line_width=6,
+                color='black', 
             labels_off=False)
 
         if not perspective:
             plotter.enable_parallel_projection()
         plotter.set_background(background_color)
-
         if show:
             plotter.show(cpos=camera_pos, screenshot=save_2d)
+        if save_2d_slice:
+            slice_2d = plotter.plane_sliced_meshes[0]
+            plotter.close()
+            point1 = slice_2d.points[0,:]
+            point2 = slice_2d.points[1,:]
+            normal_vec = np.cross(point1,point2)
+            p = pv.Plotter()
+
+            if options_dict['vector_name']:
+                arrows = slice_2d.glyph(orient=options_dict['vector_name'], scale=False, factor=0.1)
+            if arrow_color is not None:
+                p.add_mesh(arrows, color=arrow_color, show_scalar_bar=False,name='arrows')
+            else:
+                p.add_mesh(arrows, cmap=cmap, show_scalar_bar=False,name='arrows')
+            p.add_mesh(slice_2d,line_width=line_width)
+            p.remove_scalar_bar()
+            # p.set_background(background_color)
+            p.view_vector(normal_vec)
+            p.show(screenshot=save_2d_slice,interactive=False)
 
     def plot_fermi_surface_area_vs_isovalue(self,
                         iso_range: float=3,
                         iso_surfaces: int=10,
                         iso_values: List[float]=None,
+                        spins: List[int] = None,
                         fermi:float=None,
                         fermi_shift:float=0,
                         fermi_tolerance:float=0.1,
@@ -736,12 +1172,43 @@ class FermiHandler:
                         show:bool=True,
                         savefig:str=None
         ):
+        """A method to plot the fermi surface area vs the isovlaue
+
+        Parameters
+        ----------
+        iso_range : float, optional
+            The isovalue range, by default 3
+        iso_surfaces : int, optional
+            The number of sruafce to generate in the range, by default 10
+        iso_values : List[float], optional
+            Exact iso vlaues to generate surfaces, by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        fermi : float, optional
+            Ther fermi energy, by default None
+        fermi_shift : float, optional
+            Float to shift the fermi energy, by default 0
+        fermi_tolerance : float, optional
+            The fermi tolerance. This will allow more bands when searching for isosurfaces, by default 0.1
+        supercell : List[int], optional
+            A list of integers for the supercell to include, by default [1, 1, 1]
+        extended_zone_directions : List[List[int] or Tuple[int,int,int]], optional
+            A list of list that describe the directions to expand the fermi surface, by default None
+        interpolation_factor : int, optional
+            The interpolation factor, by default 1
+        cmap : str, optional
+            The colormap, by default "jet"
+        show : bool, optional
+            Boolean to show the plot, by default True
+        savefig : str, optional
+            String to save the plot, by default None
+        """
 
         if fermi is not None:
             self.e_fermi = None
 
 
-        spd, spd_spin, bands_to_keep = self.__format_data(
+        spd, spd_spin, bands_to_keep,spins = self.__format_data(
                                                         mode='plain',
                                                         bands=None,
                                                         atoms=None,
@@ -758,31 +1225,39 @@ class FermiHandler:
 
         
         for e_value in energy_values:
-            fermi_surface3D = FermiSurface3D(
-                                        kpoints=self.parser.ebs.kpoints,
-                                        bands=self.parser.ebs.bands,
-                                        bands_to_keep = bands_to_keep,
-                                        spd=spd,
-                                        spd_spin=spd_spin,
-                                        colors = None,
-                                        calculate_fermi_speed = False,
-                                        calculate_fermi_velocity = False,
-                                        calculate_effective_mass = False,
-                                        fermi=e_value,
-                                        fermi_shift = fermi_shift,
-                                        fermi_tolerance=fermi_tolerance,
-                                        reciprocal_lattice=self.reciprocal_lattice,
-                                        interpolation_factor=interpolation_factor,
-                                        projection_accuracy="normal",
-                                        supercell=supercell,
-                                        cmap=cmap,
-                                        vmin=0,
-                                        vmax=1,
-                                        extended_zone_directions = extended_zone_directions,
-                                    )
-            brillouin_zone = fermi_surface3D.brillouin_zone
-            surface_areas.append(fermi_surface3D.fermi_surface_area)
-            e_surfaces.append(fermi_surface3D)
+            fermi_surfaces = []
+            for ispin, spin in enumerate(spins):
+                fermi_surface3D = FermiSurface3D(
+                                            kpoints=self.parser.ebs.kpoints,
+                                            bands=self.parser.ebs.bands[:,:,spin],
+                                            bands_to_keep = bands_to_keep,
+                                            spd=spd[:,:,:],
+                                            spd_spin=spd_spin,
+                                            colors = None,
+                                            fermi=e_value,
+                                            fermi_shift = fermi_shift,
+                                            fermi_tolerance=fermi_tolerance,
+                                            reciprocal_lattice=self.reciprocal_lattice,
+                                            interpolation_factor=interpolation_factor,
+                                            projection_accuracy="normal",
+                                            supercell=supercell,
+                                            cmap=cmap,
+                                            vmin=0,
+                                            vmax=1,
+                                        )
+
+                brillouin_zone = fermi_surface3D.brillouin_zone
+                fermi_surfaces.append(fermi_surface3D)
+
+            fermi_surface=None
+            for i,surface in enumerate(fermi_surfaces):
+                if i == 0:
+                    fermi_surface=surface
+                else:
+                    fermi_surface+=surface
+                
+            surface_areas.append(fermi_surface.fermi_surface_area)
+            e_surfaces.append(fermi_surface)
 
         fig, axs = plt.subplots(1,1)
 
@@ -798,22 +1273,33 @@ class FermiHandler:
             plt.savefig(savefig)
 
     def __parse_code(self):
-        if self.code == "vasp" or self.code == "abinit":
+        """Helper method to parse the codes
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
+        if self.code == "vasp":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            outcar_file = f"{self.dirname}{os.sep}OUTCAR"
+            poscar_file = f"{self.dirname}{os.sep}POSCAR"
+            procar_file = f"{self.dirname}{os.sep}PROCAR"
+
             if self.repair:
                 repairhandle = UtilsProcar()
-                repairhandle.ProcarRepair(self.procar, self.procar)
+                repairhandle.ProcarRepair(procar_file, procar_file)
                 print("PROCAR repaired. Run with repair=False next time.")
 
-        if self.code == "vasp":
-            outcar = io.vasp.Outcar(filename=self.outcar)
-            
+            outcar = io.vasp.Outcar(filename=outcar_file)
             e_fermi = outcar.efermi
             
-            poscar = io.vasp.Poscar(filename=self.poscar)
+            poscar = io.vasp.Poscar(filename=poscar_file)
             structure = poscar.structure
             reciprocal_lattice = poscar.structure.reciprocal_lattice
 
-            parser = io.vasp.Procar(filename=self.procar,
+            parser = io.vasp.Procar(filename=procar_file,
                                     structure=structure,
                                     reciprocal_lattice=reciprocal_lattice,
                                     efermi=e_fermi,
@@ -822,41 +1308,17 @@ class FermiHandler:
                 parser.ebs.ibz2fbz(outcar.rotations)
             # data = ProcarSelect(procarFile, deepCopy=True)
 
-        elif self.code == "abinit":
-            procarFile = ProcarParser()
-            procarFile.readFile(self.procar, False)
-            abinitFile = AbinitParser(abinit_output=self.abinit_output)
-
-            e_fermi = abinitFile.fermi
-        
-            reciprocal_lattice = abinitFile.reclat
-            parser = ProcarSelect(procarFile, deepCopy=True)
-
-            # Converting Ha to eV
-            parser.bands = 27.211396641308 * parser.bands
-
         elif self.code == "qe":
-            # procarFile = parser
             if self.dirname is None:
-                self.dirname = "bands"
-            parser = io.qe.QEParser(scfIn_filename = "scf.in", dirname = self.dirname, bandsIn_filename = "bands.in", 
-                                pdosIn_filename = "pdos.in", kpdosIn_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml", 
-                                dos_interpolation_factor = None)
+                self.dirname = "fermi"
+            parser = io.qe.QEParser( dirname = self.dirname, scf_in_filename = "scf.in", bands_in_filename = "bands.in", 
+                                pdos_in_filename = "pdos.in", kpdos_in_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml")
             reciprocal_lattice = parser.reciprocal_lattice
-            # data = ProcarSelect(procarFile, deepCopy=True)
 
             e_fermi = parser.efermi
-
+            # e_fermi = 0
             if self.apply_symmetry:
                 parser.ebs.ibz2fbz(parser.rotations)
-
-            # procarFile = QEFermiParser()
-            # reciprocal_lattice = procarFile.reclat
-            # data = ProcarSelect(procarFile, deepCopy=True)
-            # if fermi is None:
-            #     e_fermi = procarFile.efermi
-            # else:
-            #     e_fermi = fermi
 
         elif self.code == "lobster":
             procarFile = LobsterFermiParser()
@@ -865,18 +1327,56 @@ class FermiHandler:
             e_fermi = 0
 
         elif self.code == "bxsf":
-            e_fermi = 0
-            parser = BxsfParser(infile= self.infile)
-            reciprocal_lattice = parser.reclat
+            if self.dirname is None:
+                self.dirname = "fermi"
+
+            infiles = [f"{self.dirname}{os.sep}{file}" for file in os.listdir(self.dirname) if 'bxsf' in file]
+          
+            parser = io.bxsf.BxsfParser(infiles=infiles)
+
+            e_fermi = parser.e_fermi
+            # e_fermi = 0
+            reciprocal_lattice = parser.reciprocal_lattice
             procarFile = None
 
         elif self.code == "frmsf":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            infile = f"{self.dirname}{os.sep}in.frmsrf"
+
             e_fermi = 0
-            parser = FrmsfParser(infile=self.infile)
+
+            parser = io.frmsf.FrmsfParser(infile=infile)
             reciprocal_lattice = parser.rec_lattice
             bands = np.arange(len(parser.bands[0, :]))
             procarFile = None
 
+
+        elif self.code == "abinit":
+            if self.dirname is None:
+                self.dirname = "fermi"
+            outfile = f"{self.dirname}{os.sep}abinit.out"
+
+            # e_fermi = 0
+
+            output = io.abinit.Output(abinit_output=outfile)
+            # e_fermi = 0
+            e_fermi = output.fermi
+            
+            # poscar = io.vasp.Poscar(filename=poscar_file)
+            structure = output.structure
+            reciprocal_lattice = output.structure.reciprocal_lattice
+
+            parser = io.abinit.Procar(
+                                filename=self.dirname,
+                                abinit_output=outfile,
+                                structure=output.structure,
+                                reciprocal_lattice=output.reclat,
+                                kpath=None,
+                                efermi=output.fermi,
+                            )
+
+            parser.ebs.bands += e_fermi
         parser.ebs.bands += e_fermi
         return parser, reciprocal_lattice, e_fermi
 
@@ -888,6 +1388,30 @@ class FermiHandler:
                     spins:List[int]=None, 
                     spin_texture: bool=False,
                     fermi_tolerance:float=0.1,):
+        """A helper method to process/aggregate data
+
+        Parameters
+        ----------
+        mode : str
+            the mdoe name
+        bands : List[int], optional
+            List of bands, by default None
+        atoms : List[int], optional
+            List of stoms, by default None
+        orbitals : List[int], optional
+            List of orbitals, by default None
+        spins : List[int], optional
+            List of spins, by default None
+        spin_texture : bool, optional
+            Boolean to plot spin texture, by default False
+        fermi_tolerance : float, optional
+            The tolerace to search for bands around the fermi energy, by default 0.1
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
 
         bands_to_keep = bands
         if bands_to_keep is None:
@@ -899,32 +1423,33 @@ class FermiHandler:
             if fermi_surface_test != 0:
                 self.band_near_fermi.append(iband)
 
-        print(self.e_fermi)
+        print(f"Fermi Energy : {self.e_fermi}")
         print(f"Bands near the fermi energy : {self.band_near_fermi}")
 
+        if spins is None:
+            if self.parser.ebs.bands.shape[2] == 1 or np.all(self.parser.ebs.bands[:,:,1]==0):
+                spins = [0]
+            else:
+                spins = [0,1]
+        
         spd = []
         if mode == "parametric":
-            if orbitals is None:
+            if orbitals is None and self.parser.ebs.projected is not None:
                 orbitals = np.arange(self.parser.ebs.norbitals, dtype=int)
-            if atoms is None:
+            if atoms is None and self.parser.ebs.projected is not None:
                 atoms = np.arange(self.parser.ebs.natoms, dtype=int)
-            if spins is None:
-                spins = [0]
-
-            # self.data.selectIspin(spins)
-            # self.data.selectOrbital(orbitals)
-            # self.data.selectAtoms(atoms, fortran=False)
             projected = self.parser.ebs.ebs_sum(spins=spins , atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
-            projected = projected[:,:,spins[0]]
-
-            for iband in bands_to_keep:
-                spd.append(projected[:,iband] )
-        elif mode == "property_projection":
-            for iband in bands_to_keep:
-                spd.append(None)
+            # projected = projected[:,:,spins[0]]
+            for ispin in spins:
+                spin_bands_projections = []
+                for iband in bands_to_keep:
+                    spin_bands_projections.append(projected[:,iband,ispin])
+                spd.append( spin_bands_projections)
+            spd = np.array(spd).T
+            
         else:
-            for iband in bands_to_keep:
-                spd.append(None)
+            spd = np.zeros(shape = (self.parser.ebs.nkpoints,len(bands_to_keep),len(spins)))
+
     
         spd_spin = []
 
@@ -932,7 +1457,7 @@ class FermiHandler:
             ebsX = copy.deepcopy(self.parser.ebs)
             ebsY = copy.deepcopy(self.parser.ebs)
             ebsZ = copy.deepcopy(self.parser.ebs)
-
+            print(ebsX.projected.shape)
             ebsX.projected = ebsX.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
             ebsY.projected = ebsY.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
             ebsZ.projected = ebsZ.ebs_sum(spins=spins, atoms=atoms, orbitals=orbitals, sum_noncolinear=False)
@@ -941,15 +1466,20 @@ class FermiHandler:
             ebsY.projected = ebsY.projected[:,:,[1]]
             ebsZ.projected = ebsZ.projected[:,:,[2]]
 
+
             for iband in bands_to_keep:
                 spd_spin.append(
                     [ebsX.projected[:, iband], ebsY.projected[:, iband], ebsZ.projected[:, iband]]
                 )
+
+            spd_spin = np.array(spd_spin)[:,:,:,0]
+            spd_spin = np.swapaxes(spd_spin, 0, 1)
+            spd_spin = np.swapaxes(spd_spin, 0, 2)
         else:
             for iband in bands_to_keep:
                 spd_spin.append(None)
-
-        return spd, spd_spin, bands_to_keep
+        
+        return spd, spd_spin, bands_to_keep, spins
 
     def __plot_options_helper(self,
                             mode:str,
@@ -958,6 +1488,24 @@ class FermiHandler:
                             calculate_effective_mass:bool=False,
 
                             ):
+        """Helper method set parameter values
+
+        Parameters
+        ----------
+        mode : str
+            The mode name
+        calculate_fermi_speed : bool, optional
+            Boolean for fermi speed calculation, by default False
+        calculate_fermi_velocity : bool, optional
+            Boolean for fermi velocity calculation, by default False
+        calculate_effective_mass : bool, optional
+            Boolean for effective mass calculation, by default False
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         
         if mode == "plain":
             text = "plain"
@@ -989,10 +1537,10 @@ class FermiHandler:
                 vector_name=None
             else:
                 print("Please select a property")
-        else:
+        elif mode == 'spin_texture':
             text = "Spin Texture"
             use_rgba = False
-            scalars = "spin"
+            scalars = "spin_magnitude"
             vector_name = 'spin'
 
         options_dict = {
@@ -1021,6 +1569,37 @@ class FermiHandler:
                         save_gif:str=None,
                         save_mp4:str=None,
                         save_3d:str=None):
+        """Helper method to set some common plotting options
+
+        Parameters
+        ----------
+        fermi_surface : _type_
+            _description_
+        plotter : pv.Plotter
+            _description_
+        mode : str
+            _description_
+        text : str
+            _description_
+        spin_texture : bool, optional
+            _description_, by default False
+        camera_pos : List[float], optional
+            _description_, by default [1, 1, 1]
+        background_color : strorTuple[float,float,float,float], optional
+            _description_, by default "white"
+        perspective : bool, optional
+            _description_, by default True
+        show : bool, optional
+            _description_, by default False
+        save_2d : bool, optional
+            _description_, by default None
+        save_gif : str, optional
+            _description_, by default None
+        save_mp4 : str, optional
+            _description_, by default None
+        save_3d : str, optional
+            _description_, by default None
+        """
 
         if mode != "plain" or spin_texture:
             plotter.add_scalar_bar(
@@ -1038,7 +1617,8 @@ class FermiHandler:
             xlabel="Kx", 
             ylabel="Ky", 
             zlabel="Kz", 
-            line_width=6, 
+            line_width=6,
+            color='black',
             labels_off=False)
 
         if not perspective:
@@ -1077,14 +1657,18 @@ def add_custom_mesh_slice(
                     outline_translation=False, 
                     implicit=True,
                     normal_rotation=True, 
+                    cmap='jet',
+                    arrow_color=None,
                     **kwargs):
 
         name = kwargs.get('name', mesh.memory_address)
+
+        # print(name)
+        # if kwargs.get('scalars', mesh.active_scalars_name) != 'spin':
+            
         rng = mesh.get_data_range(kwargs.get('scalars', None))
         kwargs.setdefault('clim', kwargs.pop('rng', rng))
         mesh.set_active_scalars(kwargs.get('scalars', mesh.active_scalars_name))
-
-
 
         plotter.add_mesh(mesh.outline(), name=name+"outline", opacity=0.0, line_width=line_width,show_scalar_bar=False, rgba=options_dict['use_rgba'])
 
@@ -1101,21 +1685,33 @@ def add_custom_mesh_slice(
         if show_cross_section_area:
             user_slice = plotter.plane_sliced_meshes[0]
             surface = user_slice.delaunay_2d()
-            plotter.add_text(f"Cross sectional area : {surface.area:.4f}"+"$m^{-2}$", color = 'black')
+            plotter.add_text(f"Cross sectional area : {surface.area:.4f}"+" m^-2", color = 'black')
+
+  
         def callback(normal, origin):
             # create the plane for clipping
             
             plane = generate_plane(normal, origin)
-            
             alg.SetCutFunction(plane) # the cutter to use the plane we made
             alg.Update() # Perform the Cut
-            
             plane_sliced_mesh.shallow_copy(alg.GetOutput())
+            # plotter.add_mesh(plane_sliced_mesh, name=name+"outline", opacity=0.0, line_width=line_width,show_scalar_bar=False, rgba=options_dict['use_rgba'])
+            if options_dict['vector_name']:
+                arrows = plane_sliced_mesh.glyph(orient=options_dict['vector_name'], scale=False, factor=0.1)
+                
+                if arrow_color is not None:
+                    plotter.add_mesh(arrows, color=arrow_color, show_scalar_bar=False,name='arrows')
+                else:
+                    plotter.add_mesh(arrows, cmap=cmap, show_scalar_bar=False,name='arrows')
+
+            
             if show_cross_section_area:
                 user_slice = plotter.plane_sliced_meshes[0]
                 surface = user_slice.delaunay_2d()
-                text = f"Cross sectional area : {surface.area:.4f}"+"$m^{-2}$"
+                text = f"Cross sectional area : {surface.area:.4f}"+" m^-2"
+
                 plotter.textActor.SetText(2, text)
+
 
 
 
@@ -1131,7 +1727,6 @@ def add_custom_mesh_slice(
     
         actor = plotter.add_mesh(plane_sliced_mesh,show_scalar_bar=False, line_width=line_width,rgba=options_dict['use_rgba'], **kwargs)
         plotter.plane_widgets[0].SetNormal(normal)
-
         return actor
     
 def find_nearest(array, value):

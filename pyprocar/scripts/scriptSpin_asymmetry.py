@@ -11,12 +11,11 @@ import pyvista
 from matplotlib import colors as mpcolors
 from matplotlib import cm
 from ..core import boolean_add
-from ..fermisurface3d import FermiSurface3D
+from ..core import FermiSurface3D
 from ..splash import welcome
-from ..fermisurface3d import FermiSurface3D
-from ..utilsprocar import UtilsProcar
+from ..utils import UtilsProcar
 from ..io import ProcarParser
-from ..procarselect import ProcarSelect
+from ..core import ProcarSelect
 
 def spin_asymmetry(procar='PROCAR',
                    outcar='OUTCAR',

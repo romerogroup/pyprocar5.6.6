@@ -4,6 +4,7 @@ __email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
 __date__ = "March 31, 2020"
 
 from typing import List
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,15 +22,9 @@ from ..utils.defaults import settings
 
 def bandsplot(
     code="vasp",
-    procar:str="PROCAR",
-    poscar:str="POSCAR",
-    outcar:str="OUTCAR",
-    abinit_output:str="abinit.out",
-    elkin:str="elk.in",
     dirname:str=None,
-    kpoints:np.ndarray=None,
-    lobster:bool=False,
     mode:str="plain",
+    lobster:bool=False,
     spins:List[int]=None,
     atoms:List[int]=None,
     orbitals:List[int]=None,
@@ -37,96 +32,65 @@ def bandsplot(
     fermi:float=None,
     interpolation_factor:int=1,
     interpolation_type:str="cubic",
-    projection_mask=None,
-    vmax:float=0,
-    vmin:float=1,
+    projection_mask:np.ndarray=None,
+    vmax:float=None,
+    vmin:float=None,
     kticks=None,
     knames=None,
-    kdirect:bool=True,
     elimit: List[float]=None,
     ax:plt.Axes=None,
     title:str=None,
     show:bool=True,
     savefig:str=None,
     **kwargs,
-):
-    """
+    ):
+    """A function to plot the band structutre
 
     Parameters
     ----------
-    procar : TYPE, optional
-        DESCRIPTION. The default is "PROCAR".
-    abinit_output : TYPE, optional
-        DESCRIPTION. The default is "abinit.out".
-    outcar : TYPE, optional
-        DESCRIPTION. The default is "OUTCAR".
-         kpoints : TYPE, optional
-        DESCRIPTION. The default is "KPOINTS".
-    elkin : TYPE, optional
-        DESCRIPTION. The default is "elk.in".
-    mode : TYPE, optional
-        DESCRIPTION. The default is "plain".
-    spin_mode : TYPE, optional
-        plain, magnetization, density, "spin_up", "spin_down", "both", "sx",
-        "sy", "sz", "spin_texture"
-        DESCRIPTION. The default is "plain".
-    spins : TYPE, optional
-        DESCRIPTION.
-    atoms : TYPE, optional
-        DESCRIPTION. The default is None.
-    orbitals : TYPE, optional
-        DESCRIPTION. The default is None.
-    fermi : TYPE, optional
-        DESCRIPTION. The default is None.
-    mask : TYPE, optional
-        DESCRIPTION. The default is None.
-    colors : TYPE, optional
-        DESCRIPTION.
-    cmap : TYPE, optional
-        DESCRIPTION. The default is "jet".
-    marker : TYPE, optional
-        DESCRIPTION. The default is "o".
-    markersize : TYPE, optional
-        DESCRIPTION. The default is 0.02.
-    linewidth : TYPE, optional
-        DESCRIPTION. The default is 1.
-    vmax : TYPE, optional
-        DESCRIPTION. The default is None.
-    vmin : TYPE, optional
-        DESCRIPTION. The default is None.
-    grid : TYPE, optional
-        DESCRIPTION. The default is False.
-    kticks : TYPE, optional
-        DESCRIPTION. The default is None.
-    knames : TYPE, optional
-        DESCRIPTION. The default is None.
-    elimit : TYPE, optional
-        DESCRIPTION. The default is None.
-    ax : TYPE, optional
-        DESCRIPTION. The default is None.
-    show : TYPE, optional
-        DESCRIPTION. The default is True.
-    savefig : TYPE, optional
-        DESCRIPTION. The default is None.
-    plot_color_bar : TYPE, optional
-        DESCRIPTION. The default is True.
-    title : TYPE, optional
-        DESCRIPTION. The default is None.
-    kdirect : TYPE, optional
-        DESCRIPTION. The default is True.
-    code : TYPE, optional
-        DESCRIPTION. The default is "vasp".
-    lobstercode : TYPE, optional
-        DESCRIPTION. The default is "qe".
-    verbose : TYPE, optional
-        DESCRIPTION. The default is True.
-
-    Returns
-    -------
-    None.
-
+    code : str, optional
+        String to of the code used, by default "vasp"
+    dirname : str, optional
+        The directory name of the calculation, by default None
+    mode : str, optional
+        Sting for the mode of the calculation, by default "plain"
+    lobster : bool, optional
+        Boolean if this is a lobster calculation, by default False
+    spins : List[int], optional
+        A list of spins, by default None
+    atoms : List[int], optional
+        A list of atoms, by default None
+    orbitals : List[int], optional
+        A list of orbitals, by default None
+    items : dict, optional
+        A dictionary where the keys are the atoms and the values a list of orbitals, by default {}
+    fermi : float, optional
+        Float for the fermi energy, by default None
+    interpolation_factor : int, optional
+        The interpolation_factor, by default 1
+    interpolation_type : str, optional
+        The interpolation type, by default "cubic"
+    projection_mask : np.ndarray, optional
+        A custom projection mask, by default None
+    vmax : float, optional
+        Value to normalize the minimum projection value., by default None, by default None
+    vmin : float, optional
+        Value to normalize the maximum projection value., by default None, by default None
+    kticks : _type_, optional
+        A list of kticks, by default None
+    knames : _type_, optional
+        A list of kanems, by default None
+    elimit : List[float], optional
+        A list of floats to decide the energy window, by default None
+    ax : plt.Axes, optional
+        A matplotlib axes, by default None
+    title : str, optional
+        String for the title name, by default None
+    show : bool, optional
+        Boolean if to show the plot, by default True
+    savefig : str, optional
+        String to save the plot, by default None
     """
-
 
     # Turn interactive plotting off
     # plt.ioff()
@@ -136,33 +100,8 @@ def bandsplot(
     settings.modify(kwargs)
 
     ebs, kpath, structure, reciprocal_lattice = parse(
-        code, lobster, dirname ,outcar, poscar, procar, kpoints,
-        interpolation_factor, fermi)
+        code, dirname, lobster, interpolation_factor, fermi)
     
-    if code == "vasp":
-        if outcar is not None:
-            outcar = io.vasp.Outcar(outcar)
-            if fermi is None:
-                fermi = outcar.efermi
-            reciprocal_lattice = outcar.reciprocal_lattice
-        if poscar is not None:
-            poscar = io.vasp.Poscar(poscar)
-            structure = poscar.structure
-            if reciprocal_lattice is None:
-                reciprocal_lattice = poscar.structure.reciprocal_lattice
-
-        if kpoints is not None:
-            kpoints = io.vasp.Kpoints(kpoints)
-            kpath = kpoints.kpath
-
-        procar = io.vasp.Procar(filename=procar,
-                             structure=structure,
-                             reciprocal_lattice=reciprocal_lattice,
-                             kpath=kpath,
-                             efermi=fermi,
-                             interpolation_factor=interpolation_factor)
-        ebs = procar.ebs
-
     ebs_plot = EBSPlot(ebs, kpath, ax, spins)
 
  
@@ -185,11 +124,11 @@ def bandsplot(
                 )
                 weights.append(w)
         if mode == "overlay_orbitals":
-            for iorb in ["s", "p", "d", "f"]:
-                if iorb == "f" and not ebs_plot.ebs.norbitals > 9:
+            for iorb,orb in enumerate(["s", "p", "d", "f"]):
+                if orb == "f" and not ebs_plot.ebs.norbitals > 9:
                     continue
-                labels.append(iorb)
-                orbitals = orbital_names[iorb]
+                orbitals = orbital_names[orb]
+                labels.append(orb)
                 w = ebs_plot.ebs.ebs_sum(
                     atoms=atoms,
                     principal_q_numbers=[-1],
@@ -209,13 +148,11 @@ def bandsplot(
                         if isinstance(it[ispc][0], str):
                             orbitals = []
                             for iorb in it[ispc]:
-                                orbitals = np.append(
-                                    orbitals, orbital_names[iorb]
-                                ).astype(np.int)
+                                orbitals = np.append(orbitals, orbital_names[iorb]).astype(int)
                             labels.append(ispc + "-" + "".join(it[ispc]))
                         else:
                             orbitals = it[ispc]
-                            labels.append(ispc + "-" + "_".join(it[ispc]))
+                            labels.append(ispc + "-" + "_".join(str(x) for x in it[ispc]))
                         w = ebs_plot.ebs.ebs_sum(
                             atoms=atoms,
                             principal_q_numbers=[-1],
@@ -241,10 +178,9 @@ def bandsplot(
             orbitals = []
             for iorb in orbital_str:
                 orbitals = np.append(orbitals, orbital_names[iorb]).astype(np.int)
-        weights = ebs_plot.ebs.ebs_sum(
-            atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins
-        )
-        
+
+
+        weights = ebs_plot.ebs.ebs_sum(atoms=atoms, principal_q_numbers=[-1], orbitals=orbitals, spins=spins)
         if settings.ebs.weighted_color:
             color_weights = weights
         else:
@@ -263,6 +199,7 @@ def bandsplot(
                 width_mask=width_mask,
                 vmin=vmin,
                 vmax=vmax,
+                spins=spins
 )
         elif mode == "scatter":
             ebs_plot.plot_scatter(
@@ -270,6 +207,7 @@ def bandsplot(
                 width_weights=width_weights,
                 color_mask=color_mask,
                 width_mask=width_mask,
+                spins=spins,
                 vmin=vmin,
                 vmax=vmax,
             )
@@ -298,18 +236,16 @@ def bandsplot(
         ebs_plot.save(savefig)
     if show:
         ebs_plot.show()
+        
     return ebs_plot
 
 
 def parse(code:str='vasp',
-          lobster:bool=False,
-          dirname:str="",
-          outcar:str='OUTCAR',
-          poscar:str='PORCAR',
-          procar:str='PROCAR',
-          kpoints:np.ndarray=None,
-          interpolation_factor:int=1,
-          fermi:float=None):
+            dirname:str="",
+            lobster:bool=False,
+            
+            interpolation_factor:int=1,
+            fermi:float=None):
     ebs = None
     kpath = None
     structure = None
@@ -332,6 +268,12 @@ def parse(code:str='vasp',
         ebs = parser.ebs
 
     elif code == "vasp":
+        if dirname is None:
+            dirname = "bands"
+        outcar = f"{dirname}{os.sep}OUTCAR"
+        poscar = f"{dirname}{os.sep}POSCAR"
+        procar = f"{dirname}{os.sep}PROCAR"
+        kpoints = f"{dirname}{os.sep}KPOINTS"
         if outcar is not None:
             outcar = io.vasp.Outcar(outcar)
             if fermi is None:
@@ -359,9 +301,8 @@ def parse(code:str='vasp',
     elif code == "qe":
         if dirname is None:
             dirname = "bands"
-        parser = io.qe.QEParser(scfIn_filename = "scf.in", dirname = dirname, bandsIn_filename = "bands.in", 
-                             pdosIn_filename = "pdos.in", kpdosIn_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml", 
-                             dos_interpolation_factor = None)
+        parser = io.qe.QEParser(dirname = dirname,scf_in_filename = "scf.in", bands_in_filename = "bands.in", 
+                             pdos_in_filename = "pdos.in", kpdos_in_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml")
         if fermi is None:
             fermi = parser.efermi
         reciprocal_lattice = parser.reciprocal_lattice
@@ -373,6 +314,40 @@ def parse(code:str='vasp',
 
         ebs = parser.ebs
         
+    elif code == "abinit":
+        if dirname is None:
+            dirname = "fermi"
+        outfile = f"{dirname}{os.sep}abinit.out"
+        kpointsfile = f"{dirname}{os.sep}KPOINTS"
+        # e_fermi = 0
+
+        output = io.abinit.Output(abinit_output=outfile)
+        # e_fermi = 0
+        e_fermi = output.fermi
+        
+        # poscar = io.vasp.Poscar(filename=poscar_file)
+        structure = output.structure
+        reciprocal_lattice = output.structure.reciprocal_lattice
+        ab_kpoints = io.abinit.Kpoints(filename=kpointsfile)
+
+        parser = io.abinit.Procar(
+                            filename=dirname,
+                            abinit_output=outfile,
+                            structure=output.structure,
+                            reciprocal_lattice=output.reclat,
+                            kpath=ab_kpoints,
+                            efermi=output.fermi,
+                        )
+
+
+        structure = parser.structure
+        kpoints = parser.kpoints
+        kpath = ab_kpoints.kpath
+        ebs = parser.ebs
+
+        ebs.bands +=  e_fermi
+
+
         
 
     return ebs, kpath, structure, reciprocal_lattice

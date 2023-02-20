@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: PyProcar2
+Version: 5.6.5
+Summary: A Python library for electronic structure pre/post-processing. 
+Home-page: https://github.com/romerogroup/pyprocar2
+Download-URL: https://github.com/romerogroup/pyprocar2/archive/5.6.5.tar.gz
+Author: Francisco Muñoz, Aldo Romero, Sobhit Singh, Uthpala Herath, Pedram Tavadze, Eric Bousquet, Xu He, Reese Boucher, Logan Lang, Freddy Farah
+Author-email: fvmunoz@gmail.com, alromero@mail.wvu.edu, smsingh@mix.wvu.edu, ukh0001@mix.wvu.edu, petavazohi@mix.wvu.edu, eric.bousquet@uliege.be, mailhexu@gmail.com
+License: LICENSE.txt
+License-File: LICENSE.txt

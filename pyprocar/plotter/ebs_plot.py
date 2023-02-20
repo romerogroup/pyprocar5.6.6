@@ -1,36 +1,58 @@
+__author__ = "Pedram Tavadze and Logan Lang"
+__maintainer__ = "Pedram Tavadze and Logan Lang"
+__email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
+__date__ = "March 31, 2020"
+
+from typing import List
+
 import numpy as np
-import re
+
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
-import matplotlib
-import sys
+import matplotlib as mpl
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
+
 from ..utils.defaults import settings
+from ..core import ElectronicBandStructure, KPath
 
 class EBSPlot:
-    def __init__(self, ebs, kpath=None, ax=None, spins=None, **kwargs):
-        """
-        class to plot an electronic band structure.
+    """
+    A class to plot an electronic band structure.
 
-        Parameters
-        ----------
-        ebs : object
-            An electronic band structure object pyprocar.core.ElectronicBandStructure.
-        kpath : object, optional
-            A kpath object pyprocar.core.KPath. The default is None.
-        ax : object, optional
-            A matplotlib Axes object. If provided the plot will be located at that ax.
-            The default is None.
+    Parameters
+    ----------
+    ebs : ElectronicBandStructure
+        An electronic band structure object pyprocar.core.ElectronicBandStructure.
+    kpath : KPath, optional
+        A kpath object pyprocar.core.KPath. The default is None.
+    ax : mpl.axes.Axes, optional
+        A matplotlib Axes object. If provided the plot will be located at that ax.
+        The default is None.
+    spin : List[int], optional
+        A list of the spins
+        The default is None.
 
-        Returns
-        -------
-        None.
+    Returns
+    -------
+    None.
 
-        """
+    """
+    def __init__(self, 
+                    ebs:ElectronicBandStructure, 
+                    kpath:KPath=None, 
+                    ax:mpl.axes.Axes=None, 
+                    spins:List[int]=None, 
+                    **kwargs):
+
         
         self.ebs = ebs
         self.kpath = kpath
         self.spins = spins
+        if self.spins is None:
+            self.spins = range(self.ebs.nspins)
+        self.nspins = len(self.spins)
+        if self.ebs.is_non_collinear:
+            self.spins = [0]
         self.handles = []
         settings.modify(kwargs)
 
@@ -46,15 +68,11 @@ class EBSPlot:
         self.x = self._get_x()
 
         self._initiate_plot_args()
-
+        return None
         
     def _initiate_plot_args(self):
-
-        if self.spins is None:
-            self.spins = range(self.ebs.nspins)
-        self.nspins = len(self.spins)
-        if self.ebs.is_non_collinear:
-            self.spins = [0]
+        """Helper method to initialize the plot options
+        """
         self.set_xticks()
         self.set_yticks()
         self.set_xlabel()
@@ -64,12 +82,12 @@ class EBSPlot:
         
     def _get_x(self):
         """
-        provides the x axis data of the plots
+        Provides the x axis data of the plots
 
         Returns
         -------
-        TYPE
-            DESCRIPTION.
+        np.ndarray
+            x-axis data.
 
         """
         pos = 0
@@ -90,28 +108,20 @@ class EBSPlot:
                 pos += distance
         else :
             x = np.arange(0, self.ebs.nkpoints)
+
         return np.array(x).reshape(-1,)
 
     def plot_bands(self):
         """
         Plot the plain band structure.
 
-        Parameters
-        ----------
-        spins : list, optional
-            A list of the spins to be plotted. The default is None.
-        color : string, optional
-            Color for the bands. The default is "blue".
-        opacity : float, optional
-            Opacity level between 0.0 and 1.0. The default is 1.0.
-
         Returns
         -------
         None.
 
         """
-
-        for ispin in range(self.ebs.bands.shape[2]):
+        
+        for ispin in self.spins:
             for iband in range(self.ebs.nbands):
                 handle = self.ax.plot(
                     self.x, self.ebs.bands[:, iband, ispin], color=settings.ebs.color[ispin], alpha=settings.ebs.opacity[
@@ -130,14 +140,38 @@ class EBSPlot:
 
 
     def plot_scatter(self,
-                     width_mask=None,
-                     color_mask=None,
-                     vmin=None,
-                     vmax=None,
-                     width_weights=None,
-                     color_weights=None,
+                     width_mask:np.ndarray=None,
+                     color_mask:np.ndarray=None,
+                     vmin:float=None,
+                     vmax:float=None,
+                     spins:List[int]=None,
+                     width_weights:np.ndarray=None,
+                     color_weights:np.ndarray=None,
                      ):
+        """A method to plot a scatter plot
 
+        Parameters
+        ----------
+        width_mask : np.ndarray, optional
+            The width mask, by default None
+        color_mask : np.ndarray, optional
+            The color mask, by default None
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None
+        spins : List[int], optional
+            A list of spins, by default None
+        width_weights : np.ndarray, optional
+            The width weight of each point, by default None
+        color_weights : np.ndarray, optional
+            The color weights at each point, by default None
+        """
+        if spins is None:
+            spins = range(self.ebs.nspins)
+        if self.ebs.is_non_collinear:
+            spins = [0]
+        
         if width_weights is None:
             width_weights = np.ones_like(self.ebs.bands)
             markersize = settings.ebs.markersize
@@ -162,8 +196,11 @@ class EBSPlot:
                 vmin = color_weights.min()
             if vmax is None:
                 vmax = color_weights.max()
+
+            print(color_weights.min())
             print("normalizing to : ", (vmin, vmax))
-        for ispin in self.spins:
+
+        for ispin in spins:
             for iband in range(self.ebs.nbands):
                 if color_weights is None:
                     sc = self.ax.scatter(
@@ -172,8 +209,8 @@ class EBSPlot:
                         c=settings.ebs.color[ispin],
                         s=width_weights[:, iband, ispin].round(
                             2)*markersize[ispin],
-                        edgecolors="none",
-                        linewidths=0,
+                        # edgecolors="none",
+                        linewidths=settings.ebs.linewidth[ispin],
                         cmap=settings.ebs.color_map,
                         vmin=vmin,
                         vmax=vmax,
@@ -185,10 +222,9 @@ class EBSPlot:
                         self.x,
                         mbands[:, iband, ispin],
                         c=color_weights[:, iband, ispin].round(2),
-                        s=width_weights[:, iband, ispin].round(
-                            2)*markersize[ispin],
-                        edgecolors="none",
-                        linewidths=0,
+                        s=width_weights[:, iband, ispin].round(2)*markersize[ispin],
+                        # edgecolors="none",
+                        linewidths=settings.ebs.linewidth[ispin],
                         cmap=settings.ebs.color_map,
                         vmin=vmin,
                         vmax=vmax,
@@ -201,14 +237,33 @@ class EBSPlot:
 
     def plot_parameteric(
         self,
-        spins=None,
-        vmin=None,
-        vmax=None,
-        width_mask=None,
-        color_mask=None,
-        width_weights=None,
-        color_weights=None,
-    ):
+        spins:List[int]=None,
+        vmin:float=None,
+        vmax:float=None,
+        width_mask:np.ndarray=None,
+        color_mask:np.ndarray=None,
+        width_weights:np.ndarray=None,
+        color_weights:np.ndarray=None,
+        ):
+        """A method to plot a scatter plot
+
+        Parameters
+        ----------
+        spins : List[int], optional
+            A list of spins, by default None
+        vmin : float, optional
+            Value to normalize the minimum projection value., by default None
+        vmax : float, optional
+            Value to normalize the maximum projection value., by default None
+        width_mask : np.ndarray, optional
+            The width mask, by default None
+        color_mask : np.ndarray, optional
+            The color mask, by default None
+        width_weights : np.ndarray, optional
+            The width weight of each point, by default None
+        color_weights : np.ndarray, optional
+            The color weights at each point, by default None
+        """
         if width_weights is None:
             width_weights = np.ones_like(self.ebs.bands)
             linewidth = settings.ebs.linewidth
@@ -220,7 +275,7 @@ class EBSPlot:
         if self.ebs.is_non_collinear:
             spins = [0]
         
-
+        
         if width_mask is not None or color_mask is not None:
             if width_mask is not None:
                 mbands = np.ma.masked_array(
@@ -246,6 +301,7 @@ class EBSPlot:
                 points = np.array(
                     [self.x, mbands[:, iband, ispin]]).T.reshape(-1, 1, 2)
                 segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                
                 # this is to delete the segments on the high sym points
                 x = self.x
                 # segments = np.delete(
@@ -271,13 +327,27 @@ class EBSPlot:
             cb.ax.tick_params(labelsize=20)
 
     def plot_parameteric_overlay(self,
-                                 spins=None,
-                                 vmin=None,
-                                 vmax=None,
-                                 weights=None,
-                                 plot_color_bar=False,
+                                 spins:List[int]=None,
+                                 vmin:float=None,
+                                 vmax:float=None,
+                                 weights:np.ndarray=None,
+                                 plot_color_bar:bool=False,
                                  ):
+        """A method to plot the parametric overlay
 
+        Parameters
+        ----------
+        spins : List[int], optional
+            A list of spins, by default None
+        vmin : float, optional
+            Value to normalize the minimum projection value, by default None
+        vmax : float, optional
+            Value to normalize the maximum projection value, by default None
+        weights : np.ndarray, optional
+            The weights of each point, by default None
+        plot_color_bar : bool, optional
+            Boolean to plot the color bar, by default False
+        """
         
         linewidth = [l*7 for l in settings.ebs.linewidth]
         if type(settings.ebs.color_map) is str:
@@ -319,7 +389,22 @@ class EBSPlot:
                 cb = self.fig.colorbar(lc, ax=self.ax)
                 cb.ax.tick_params(labelsize=20)
 
-    def set_xticks(self, tick_positions=None, tick_names=None, color="black"):
+    def set_xticks(self, 
+        tick_positions:List[int]=None, 
+        tick_names:List[str]=None, 
+        color:str="black"):
+        """A method to set the x ticks
+
+        Parameters
+        ----------
+        tick_positions : List[int], optional
+            A list of tick positions, by default None
+        tick_names : List[str], optional
+            A list of tick names, by default None
+        color : str, optional
+            A color for the ticks, by default "black"
+        """
+
         if self.kpath is not None:
             if tick_positions is None:
                 tick_positions = self.kpath.tick_positions
@@ -327,6 +412,7 @@ class EBSPlot:
                 tick_names = self.kpath.tick_names
             for ipos in tick_positions:
                 self.ax.axvline(self.x[ipos], color=color)
+
             self.ax.set_xticks(self.x[tick_positions])
             self.ax.set_xticklabels(tick_names)
             self.ax.tick_params(
@@ -334,7 +420,21 @@ class EBSPlot:
                 axis='x',
                 direction='in')
 
-    def set_yticks(self, major=None, minor=None, interval=None):
+    def set_yticks(self, 
+        major:float=None, 
+        minor:float=None, 
+        interval:List[float]=None):
+        """A method to set the y ticks
+
+        Parameters
+        ----------
+        major : float, optional
+            A float to set the major tick locator, by default None
+        minor : float, optional
+            A float to set the the minor tick Locator, by default None
+        interval : List[float], optional
+            The interval of the ticks, by default None
+        """
         if (major is None or minor is None):
             if interval is None:
                 interval = (self.ebs.bands.min()-abs(self.ebs.bands.min())
@@ -378,35 +478,94 @@ class EBSPlot:
             left=True,
             right=True)
 
-    def set_xlim(self, interval=None):
+    def set_xlim(self, interval:List[float]=None):
+        """A method to set the x limit
+
+        Parameters
+        ----------
+        interval : List[float], optional
+            A list containing the begining and the end of the interval, by default None
+        """
         if interval is None:
             interval = (self.x[0], self.x[-1])
         self.ax.set_xlim(interval)
 
-    def set_ylim(self, interval=None):
+    def set_ylim(self, interval:List[float]=None):
+        """A method to set the y limit
+
+        Parameters
+        ----------
+        interval : List[float], optional
+            A list containing the begining and the end of the interval, by default None
+        """
         if interval is None:
             interval = (self.ebs.bands.min()-abs(self.ebs.bands.min())
                         * 0.1, self.ebs.bands.max()*1.1)
         self.ax.set_ylim(interval)
 
-    def set_xlabel(self, label="K vector"):
+    def set_xlabel(self, label:str="K vector"):
+        """A method to set the x label
+
+        Parameters
+        ----------
+        label : str, optional
+            String fo the x label name, by default "K vector"
+        """
         self.ax.set_xlabel(label)
 
-    def set_ylabel(self, label=r"E - E$_F$ (eV)"):
+    def set_ylabel(self, label:str=r"E - E$_F$ (eV)"):
+        """A method to set the y label
+
+        Parameters
+        ----------
+        label : str, optional
+            String fo the y label name, by default r"E - E$ (eV)"
+        """
         self.ax.set_ylabel(label)
-    def set_title(self, title="Band Structure"):
+
+    def set_title(self, title:str="Band Structure"):
+        """A method to set the title
+
+        Parameters
+        ----------
+        title : str, optional
+            String for the title, by default "Band Structure"
+        """
         self.ax.set_title(label=title)
 
-    def legend(self, labels=None):
+    def legend(self, labels:List[str]=None):
+        """A methdo to plot the legend
+
+        Parameters
+        ----------
+        labels : List[str], optional
+            A list of strings for the labels of each element for the legend, by default None
+        """
         if labels == None:
             labels = settings.ebs.label
         self.ax.legend(self.handles, labels)
 
-    def draw_fermi(self, color="blue", linestyle="dotted", linewidth=1):
+    def draw_fermi(self, 
+                color:str="blue", 
+                linestyle:str="dotted", 
+                linewidth:float=1):
+        """A method to draw the fermi line
+
+        Parameters
+        ----------
+        color : str, optional
+            The color of the fermi line, by default "blue"
+        linestyle : str, optional
+            The linestyle, by default "dotted"
+        linewidth : float, optional
+            The linewidth, by default 1
+        """
         self.ax.axhline(y=0, color=color, linestyle=linestyle, linewidth=linewidth)
 
 
     def grid(self):
+        """A method to plot a grid
+        """
         self.ax.grid(
             settings.ebs.grid,
             which=settings.ebs.grid_which,
@@ -416,9 +575,18 @@ class EBSPlot:
         
         
     def show(self):
+        """A method to show the plot
+        """
         plt.show()
 
-    def save(self, filename='bands.pdf'):        
+    def save(self, filename:str='bands.pdf'):
+        """A method to save the plot
+
+        Parameters
+        ----------
+        filename : str, optional
+            A string for the file name, by default 'bands.pdf'
+        """
         plt.savefig(filename, bbox_inches="tight")
         plt.clf()
     

@@ -4,6 +4,7 @@ __maintainer__ = "Pedram Tavadze and Logan Lang"
 __email__ = "petavazohi@mail.wvu.edu, lllang@mix.wvu.edu"
 __date__ = "March 31, 2020"
 
+import os
 from typing import List, Tuple
 
 import numpy as np
@@ -96,8 +97,7 @@ def dosplot(
 
         e.g. ``orientation='vertical'``
 
-    spin_colors : list str or tuples, (optional ``spin_colors=['blue',
-        'red']``)
+    spin_colors : list str or tuples, (optional ``spin_colors=['blue','red']``)
         **spin_colors** represent the colors the different spin
         ploarizations are going to be represented in the DOS
         plot. These colors can be chosen from any type of color
@@ -107,9 +107,11 @@ def dosplot(
         ``spin_colors=[(0, 0, 1),(1, 0,0 )]``,
         ``spin_colors=['#0000ff','#ff0000']``
 
-        .. caution:: If the calculation is spin polarized one has to
-        provide two colors even if one is plotting one spin. I
-        disregard this cation if using default.
+        .. caution:: 
+        
+            If the calculation is spin polarized one has to
+            provide two colors even if one is plotting one spin. I
+            disregard this cation if using default.
 
     colors : list str or tuples, optional (default, optional)
         ``colors`` defines the color of plots filling the area under
@@ -174,11 +176,16 @@ def dosplot(
         has to be order of the input files of DFT package. The
         following table represents the indecies for different orbitals
         in **VASP**.
+
+        .. code-block::
+            :linenos:
+            
             +-----+-----+----+----+-----+-----+-----+-----+-------+
             |  s  | py  | pz | px | dxy | dyz | dz2 | dxz | x2-y2 |
             +-----+-----+----+----+-----+-----+-----+-----+-------+
             |  0  |  1  |  2 |  3 |  4  |  5  |  6  |  7  |   8   |
             +-----+-----+----+----+-----+-----+-----+-----+-------+
+
         ``orbitals`` is only relavent in ``mode='parametric'``,
         ``mode='parametric_line'``, ``mode='stack_species'``.
 
@@ -326,25 +333,16 @@ def dosplot(
         using this returned object.
         e.g. ::
 
-            >>> fig, ax = pyprocar.dosplot(mode='plain', plt_show=False)
-            >>> ax.set_ylim(-2,2)
-            >>> fig.show()
+        >>> fig, ax = pyprocar.dosplot(mode='plain', plt_show=False)
+        >>> ax.set_ylim(-2,2)
+        >>> fig.show()
 
     """
     
-    
-    if mode not in [
-            'plain', 'parametric_line', 'parametric', 'stack_species',
-            'stack_orbitals', 'stack']:
-        raise ValueError(
-            "Mode should be choosed from ['plain', 'parametric_line','parametric','stack_species','stack_orbitals','stack']"
-        )
-
     if orientation[0].lower() == 'h':
         orientation = 'horizontal'
     elif orientation[0].lower() == 'v':
         orientation = 'vertical'
-
 
     dos, structure, reciprocal_lattice = parse(
                                         code=code,
@@ -360,23 +358,23 @@ def dosplot(
     if elimit is None:
         elimit = [dos.energies.min(), dos.energies.max()]
     
-    edos_plot = DOSPlot(dos = dos, structure = structure, spins = spins, orientation = orientation)
+    edos_plot = DOSPlot(dos = dos, structure = structure, orientation = orientation)
     
     if mode == "plain":
-        edos_plot.plot_dos(orientation = orientation)
+        edos_plot.plot_dos(spins=spins, orientation = orientation)
 
-    if mode == "parametric":
+    elif mode == "parametric":
         if atoms is None:
             atoms = list(np.arange(edos_plot.structure.natoms, dtype=int))
         if spins is None:
             spins = list(np.arange(len(edos_plot.dos.total)))
         if orbitals is None:
             orbitals = list(np.arange(len(edos_plot.dos.projected[0][0]), dtype=int))
-        
         edos_plot.plot_parametric(
                         atoms=atoms,
                         principal_q_numbers=[-1],
                         orbitals=orbitals,
+                        spins=spins,
                         spin_colors=spin_colors,
                         spin_labels=spin_labels,
                         cmap=cmap,
@@ -386,7 +384,7 @@ def dosplot(
                         plot_total=plot_total,
                         plot_bar=True)
 
-    if mode == "parametric_line":
+    elif mode == "parametric_line":
         if atoms is None:
             atoms = list(np.arange(edos_plot.structure.natoms, dtype=int))
         if spins is None:
@@ -397,13 +395,18 @@ def dosplot(
         edos_plot.plot_parametric_line(
                         atoms=atoms,
                         principal_q_numbers=[-1],
+                        spins=spins,
                         orbitals=orbitals,
                         spin_colors=spin_colors,
+                        vmax=vmax,
+                        vmin=vmin,
+                        cmap=cmap,
                         orientation=orientation
                         )
 
-    if mode == "stack_species":
+    elif mode == "stack_species":
         edos_plot.plot_stack_species(
+            spins=spins,
             orbitals=orbitals,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -414,6 +417,7 @@ def dosplot(
 
     elif mode == "stack_orbitals":
         edos_plot.plot_stack_orbitals(
+            spins=spins,
             atoms=atoms,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -424,6 +428,7 @@ def dosplot(
 
     elif mode == "stack":
         edos_plot.plot_stack(
+            spins=spins,
             items=items,
             spin_colors=spin_colors,
             spin_labels = spin_labels,
@@ -431,6 +436,8 @@ def dosplot(
             orientation=orientation,
             plot_total = plot_total,
         )
+    else:
+        raise ValueError("The mode needs to be in the List [plain,parametric,parametric_line,stack_species,stack_orbitals,stack]")
 
     edos_plot.draw_fermi(
             orientation = orientation,
@@ -487,6 +494,11 @@ def parse(code: str='vasp',
         dos = parser.dos
 
     elif code == "vasp":
+        outcar = f"{dirname}{os.sep}OUTCAR"
+        poscar = f"{dirname}{os.sep}POSCAR"
+        procar = f"{dirname}{os.sep}PROCAR"
+        kpoints = f"{dirname}{os.sep}KPOINTS"
+        filename = f"{dirname}{os.sep}{filename}"
         if outcar is not None:
             outcar = io.vasp.Outcar(outcar)
             if fermi is None:
@@ -508,9 +520,8 @@ def parse(code: str='vasp',
     elif code == "qe":
         if dirname is None:
             dirname = "dos"
-        parser = io.qe.QEParser(scfIn_filename = "scf.in", dirname = dirname, bandsIn_filename = "bands.in", 
-                             pdosIn_filename = "pdos.in", kpdosIn_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml", 
-                             dos_interpolation_factor =interpolation_factor)
+        parser = io.qe.QEParser(dirname = dirname, scf_in_filename = "scf.in", bands_in_filename = "bands.in", 
+                             pdos_in_filename = "pdos.in", kpdos_in_filename = "kpdos.in", atomic_proj_xml = "atomic_proj.xml")
         if fermi is None:
             fermi = parser.efermi
         

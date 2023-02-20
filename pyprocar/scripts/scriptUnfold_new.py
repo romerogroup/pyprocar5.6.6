@@ -6,13 +6,12 @@ from ..io import vasp
 from ..plotter import EBSPlot
 from ..io import AbinitParser
 from ..io import ElkParser
-from ..io import QEParser
 from ..io import LobsterParser
 from ..io import ProcarParser
-from ..procarplot import ProcarPlot
-from ..procarselect import ProcarSelect
+from ..plotter import ProcarPlot
+from ..core import ProcarSelect
 from ..splash import welcome
-from ..utilsprocar import UtilsProcar
+from ..utils import UtilsProcar
 
 
 def unfold(

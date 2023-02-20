@@ -26,7 +26,33 @@ author = "Uthpala Herath"
 # The short X.Y version
 version = ""
 # The full version, including alpha/beta/rc tags
-release = "5.5.0"
+release = "2.0.0"
+
+
+# -- pyvista configuration ---------------------------------------------------
+import pyvista
+
+# Manage errors
+pyvista.set_error_output_file("errors.txt")
+# Ensure that offscreen rendering is used for docs generation
+pyvista.OFF_SCREEN = True  # Not necessary - simply an insurance policy
+# Preferred plotting style for documentation
+pyvista.set_plot_theme("document")
+pyvista.global_theme.window_size = [1024, 768]
+pyvista.global_theme.font.size = 22
+pyvista.global_theme.font.label_size = 22
+pyvista.global_theme.font.title_size = 22
+pyvista.global_theme.return_cpos = False
+# pyvista.set_jupyter_backend(None)
+# Save figures in specified directory
+pyvista.FIGURE_PATH = os.path.join(os.path.abspath("./images/"), "auto-generated/")
+if not os.path.exists(pyvista.FIGURE_PATH):
+    os.makedirs(pyvista.FIGURE_PATH)
+
+# necessary when building the sphinx gallery
+pyvista.BUILDING_GALLERY = True
+os.environ['PYVISTA_BUILDING_GALLERY'] = 'true'
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -38,10 +64,39 @@ release = "5.5.0"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc", "sphinx.ext.mathjax", "sphinx.ext.githubpages",
-    "sphinx.ext.napoleon", 'sphinx.ext.viewcode', 'sphinx_copybutton',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.githubpages",
+    'sphinx.ext.intersphinx',
+    "sphinx.ext.mathjax", 
+    "sphinx.ext.napoleon", 
+    'sphinx.ext.viewcode',
+    
+    'sphinx_copybutton',
+    'sphinx_design',
+    'sphinx_gallery.gen_gallery',
     'numpydoc'
 ]
+
+# Used to set up examples sections
+sphinx_gallery_conf = {
+    # convert rst to md for ipynb
+    "pypandoc": True,
+    # path to your examples scripts
+    "examples_dirs": ["../examples/"],
+    # path where to save gallery generated examples
+    "gallery_dirs": ["examples"],
+    "doc_module": "pyprocar",
+    "image_scrapers": ("pyvista", "matplotlib"),
+}
+
+
+# See https://numpydoc.readthedocs.io/en/latest/install.html
+numpydoc_use_plots = True
+numpydoc_show_class_members = False
+numpydoc_xref_param_type = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -60,7 +115,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -75,14 +130,29 @@ pygments_style = "sphinx"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+# import pydata_sphinx_theme
+html_theme = "pydata_sphinx_theme"
 # html_theme_path = ["_themes", ]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    "github_url": "https://github.com/romerogroup/pyprocar",
+    "icon_links": [ 
+        {
+            "name": "Contributing",
+            "url": "https://github.com/romerogroup/pyprocar/CONTRIBUTING.rst",
+            "icon": "fa fa-gavel fa-fw",
+        },
+        {
+            "name": "The Paper",
+            "url": "https://doi.org/10.1016/j.cpc.2019.107080",
+            "icon": "fa fa-file-text fa-fw",
+        },
+    ]
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -156,3 +226,6 @@ texinfo_documents = [
 ]
 
 # -- Extension configuration -------------------------------------------------
+
+# skip building the osmnx example if osmnx is not installed
+

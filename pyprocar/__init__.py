@@ -38,23 +38,22 @@ import pyvista
 import trimesh
 
 
-from pyprocar.procarfilefilter import ProcarFileFilter
-from pyprocar.procarplot import ProcarPlot
-from pyprocar.procarselect import ProcarSelect
-from pyprocar.procarsymmetry import ProcarSymmetry
-from pyprocar.utilsprocar import UtilsProcar
-from pyprocar.procarunfold import ProcarUnfolder
+# from pyprocar.procarfilefilter import ProcarFileFilter
+# from pyprocar.procarplot import ProcarPlot
+# from pyprocar.procarselect import ProcarSelect
+# from pyprocar.procarsymmetry import ProcarSymmetry
+# from pyprocar.utilsprocar import UtilsProcar
+# from pyprocar.procarunfold import ProcarUnfolder
 
 from .splash import welcome
 
 from .scripts import *
 from .io import *
-from .fermisurface3d import *
 from . import io
 from . import core
 from . import utils
 from . import plotter
-from .download_examples import download_examples
+from .download_examples import download_examples, download_example
 from .utils.defaults import Settings
 
 # TODO change all n* variables to n_* variable (norbital to n_orbital)

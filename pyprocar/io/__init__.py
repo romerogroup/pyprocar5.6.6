@@ -1,13 +1,14 @@
 from . import vasp 
 from . import qe
 from . import lobster
+from . import abinit
+from . import siesta
 # from . import bsxf
 # from . import frmsf
 
 from .procarparser import ProcarParser
 from .abinitparser import AbinitParser
 from .elkparser import ElkParser
-from .qeparser import QEParser, QEDOSParser, QEFermiParser
 from .lobsterparser import LobsterParser, LobsterDOSParser, LobsterFermiParser
 from .vaspxml import VaspXML
 # from . import vaspxml
