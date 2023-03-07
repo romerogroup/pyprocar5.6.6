@@ -65,7 +65,7 @@ def kpath(
     positions_matrix = POSCAR[8:8 + sum(atoms)]
     positions = np.zeros(shape=(np.sum(atoms), 3))
 
-    for j in range(len(positions_matrix)):
+    for j in range(1, len(positions_matrix)):
         positions_matrix0 = np.array(positions_matrix[j].split())[0:3]
         positions[j, :] = positions_matrix0.astype(float)
 
