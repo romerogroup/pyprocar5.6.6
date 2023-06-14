@@ -113,6 +113,7 @@ class Unfolder:
 
         W= sum_1^N < evec| T(r_i)exp(-I (K+G) * r_i| evec>, here
         G=0. T(r_i)exp(-I K r_i)| evec> = evec[indices[i]]
+
         """
         if G is None:
             G = np.zeros_like(qpt)

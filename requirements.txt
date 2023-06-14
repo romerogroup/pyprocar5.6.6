@@ -1,9 +1,8 @@
-gdown
-matplotlib
-numpy
-pyvista
-scikit-image
 scipy
+matplotlib
 seekpath
-spglib
+ase
+scikit-image
+pychemia
+pyvista
 trimesh

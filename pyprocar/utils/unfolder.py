@@ -1,6 +1,10 @@
-import numpy as np
+# -*- coding: utf-8 -*-
 
-# from ..core import Structure
+import numpy as np
+from ..core import Structure
+from ase.atoms import Atoms
+from ase.build import make_supercell
+
 
 class Unfolder:
     def __init__(

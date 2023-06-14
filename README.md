@@ -22,7 +22,7 @@ Currently supports:
 Documentation
 -------------
 
-https://romerogroup.github.io/pyprocar2/
+https://romerogroup.github.io/pyprocar/
 
 Developers
 ------------

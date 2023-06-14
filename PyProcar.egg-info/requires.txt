@@ -1,0 +1,8 @@
+matplotlib
+seekpath
+scipy
+ase
+scikit-image
+pychemia
+pyvista
+trimesh

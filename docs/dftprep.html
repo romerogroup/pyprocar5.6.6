@@ -1,0 +1,437 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>DFT Preparation &mdash; PyProcar 5.5.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Tutorials" href="tutorials.html" />
+    <link rel="prev" title="How to cite" href="cite.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> PyProcar
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developers.html">Developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cite.html">How to cite</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DFT Preparation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#vasp">1. VASP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#elk">2. Elk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quantum-espresso">3. Quantum Espresso</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lobster">4. Lobster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#abinit">5. Abinit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">pyprocar API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyProcar</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>DFT Preparation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/dftprep.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="dft-preparation">
+<span id="labeldftprep"></span><h1>DFT Preparation<a class="headerlink" href="#dft-preparation" title="Permalink to this headline">¶</a></h1>
+<p>This section discusses steps to perform DFT calculations to obtain data required to run PyProcar for post-processing. Examples of these are available in the <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory of the Github repository. Features that require non-collinear spin calculations such as 2D spin texture plots and 3D Fermi surfaces with spin texture is currently only supported for VASP calculations. Band unfolding is also limited to VASP calculations since the phase of the wavefunctions is only parsed from the VASP PROCAR file. Support for these features in other DFT codes will be available in the future.</p>
+<p>The flag is to be set in PyProcar functions to select the DFT code.</p>
+<p>E.g.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pyprocar</span><span class="o">.</span><span class="n">bandsplot</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="s1">&#39;elk&#39;</span><span class="p">,</span> <span class="n">elimit</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span><span class="mi">5</span><span class="p">],</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;plain&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="vasp">
+<h2>1. VASP<a class="headerlink" href="#vasp" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Required files : PROCAR, OUTCAR (optional), KPOINTS (optional)</p></li>
+<li><p>flag           : code=’vasp’ (default)</p></li>
+</ul>
+<p>In the VASP code, the wavefunction projection information is written into the PROCAR file when <code class="docutils literal notranslate"><span class="pre">LORBIT=11</span></code> is set in the INCAR file. For band unfolding, set <code class="docutils literal notranslate"><span class="pre">LORBIT=12</span></code> to include phase projections of the wave functions.
+An OUTCAR file is required to extract the Fermi-energy and reciprocal lattice vectors. If a KPOINTS file is provided, the <span class="math notranslate nohighlight">\(k\)</span>-path will automatically be labeled in the band structure.
+To perform spin colinear calculations set <code class="docutils literal notranslate"><span class="pre">ISPIN</span> <span class="pre">=</span> <span class="pre">2</span></code> in the <code class="docutils literal notranslate"><span class="pre">INCAR</span></code>.
+To perform spin non-colinear calculations set <code class="docutils literal notranslate"><span class="pre">ISPIN</span> <span class="pre">=</span> <span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">LNONCOLLINEAR</span> <span class="pre">=</span> <span class="pre">.TRUE.</span></code>.</p>
+<p>First perform a self-consistent calculation with a <span class="math notranslate nohighlight">\(k\)</span>-mesh grid. Then set <code class="docutils literal notranslate"><span class="pre">ICHARG=11</span></code> in the INCAR and create a KPOINTS file containing the :math:-<cite>k</cite>-path. This can be done with the <a class="reference internal" href="kpath.html#labelkpath"><span class="std std-ref">Generating a k-path</span></a> feature in PyProcar.</p>
+</section>
+<section id="elk">
+<h2>2. Elk<a class="headerlink" href="#elk" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Required files : elk.in, BANDLINES.OUT, EFERMI.OUT, LATTICE.OUT, BAND_S*_A*.OUT files</p></li>
+<li><p>flag           : code=’elk’</p></li>
+</ul>
+<p>To obtain the required files for Elk, set the following tasks in <code class="docutils literal notranslate"><span class="pre">elk.in</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">tasks</span>
+<span class="mi">0</span>
+<span class="mi">22</span>
+</pre></div>
+</div>
+<p>Additionally, for spin colinear calculations set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">spinpol</span>
+<span class="o">.</span><span class="n">true</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>A <span class="math notranslate nohighlight">\(k\)</span>-path can be specified in elk.in as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>! These are the vertices to be joined for the band structure plot
+plot1d
+6 40
+0.0      0.0      0.0 : \Gamma
+0.5      0.0      0.0 : X
+0.5      0.5      0.0 : M
+0.0      0.0      0.0 : \Gamma
+0.5      0.5      0.5 : R
+0.5      0.0      0.0 : X
+</pre></div>
+</div>
+<p>First, complete the Elk calculation and then run PyProcar in the same directory as the Elk calculations were performed.</p>
+</section>
+<section id="quantum-espresso">
+<h2>3. Quantum Espresso<a class="headerlink" href="#quantum-espresso" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Required files : bands.in, kpdos.in, pdos.in,scf.in, atomic_proj.xml</p></li>
+<li><p>flag           : code=’qe’</p></li>
+</ul>
+<p>Quantum Espresso v6.5+ is supported.</p>
+<p>To use Pyprocar with QE, one has to run various calculations in independent directories. Here, we will show examples for the different calculations</p>
+<p><strong>Band Structure</strong></p>
+<ol class="arabic simple">
+<li><p>Create directory called <code class="docutils literal notranslate"><span class="pre">bands</span></code>.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">scf.in</span></code> file.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">bands.in</span></code> file.  (Read kpoints section on how to add labels)</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">projwfc.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">kpdos.in</span></code> file (Make sure kresolveddos=.true.).</p></li>
+<li><p>Make sure to copy the atomic_proj.xml file that is found in the .save directory into the main directory</p></li>
+<li><p>Run pyprocar.bandsplot(dirname = ‘bands’ ,mode = ‘plain’, code = ‘qe’)</p></li>
+</ol>
+<p><strong>Density of States</strong></p>
+<ol class="arabic simple">
+<li><p>Create directory called <code class="docutils literal notranslate"><span class="pre">dos</span></code>.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">scf.in</span></code> file.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">nscf.in</span></code> file.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">projwfc.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">pdos.in</span></code> file (Make sure kresolveddos=.false.).</p></li>
+<li><p>Make sure to copy the atomic_proj.xml file that is found in the .save directory into the main directory</p></li>
+<li><p>Run pyprocar.dosplot(dirname = ‘bands’ ,mode = ‘plain’, code = ‘qe’)</p></li>
+</ol>
+<p><strong>Band Structure and Density of States</strong></p>
+<ol class="arabic simple">
+<li><p>Run the band structure and dos calculation as stated above</p></li>
+</ol>
+<ol class="arabic simple" start="5">
+<li><p>Run pyprocar.bandsdosplot(bands_dirname = ‘bands’, dos_dirname = ‘dos’, bands_mode = ‘plain’, dos_mode = ‘plain’, code = ‘qe’)</p></li>
+</ol>
+<p><strong>Fermi</strong></p>
+<ol class="arabic simple">
+<li><p>Create directory called <code class="docutils literal notranslate"><span class="pre">fermi</span></code>.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">scf.in</span></code> file.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">pw.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">nscf.in</span></code> file.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">projwfc.x</span></code> on your <code class="docutils literal notranslate"><span class="pre">kpdos.in</span></code> file (Make sure kresolveddos=.true.).</p></li>
+<li><p>Make sure to copy the atomic_proj.xml file that is found in the .save directory into the main directory</p></li>
+<li><p>Run pyprocar.fermi3D</p></li>
+</ol>
+<p><strong>K-Points Format</strong></p>
+<p>The <span class="math notranslate nohighlight">\(k\)</span>-path can be specified in <code class="docutils literal notranslate"><span class="pre">bands.in</span></code> which is used for the band structure calculation as one of the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>K_POINTS {crystal_b}
+8
+    0.0000000000       0.0000000000       0.0000000000       30 !G
+    0.5000000000       0.0000000000       0.5000000000       30 !X
+    0.6250000000       0.2500000000       0.6250000000       1  !U
+    0.3750000000       0.3750000000       0.7500000000       30 !K
+    0.0000000000       0.0000000000       0.0000000000       30 !G
+    0.5000000000       0.5000000000       0.5000000000       30 !L
+    0.5000000000       0.2500000000       0.7500000000       30 !W
+    0.5000000000       0.0000000000       0.5000000000       30 !X
+</pre></div>
+</div>
+<p>Where the one occurs is at the place of a discontinuity.</p>
+<p>Explicit:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>K_POINTS {crystal}
+269
+    0.0000000000       0.0000000000       0.0000000000      1.0 !G
+    0.0083333333       0.0000000000       0.0083333333      1.0
+    0.0166666667       0.0000000000       0.0166666667      1.0
+    0.0250000000       0.0000000000       0.0250000000      1.0
+    0.0333333333       0.0000000000       0.0333333333      1.0
+    0.0416666667       0.0000000000       0.0416666667      1.0
+    .
+    .
+    .
+    0.4916666667       0.0000000000       0.4916666667      1.0
+    0.5000000000       0.0000000000       0.5000000000      1.0 !X
+    0.5062500000       0.0125000000       0.5062500000      1.0
+    .
+    .
+    .
+    0.6125000000       0.2250000000       0.6125000000      1.0
+    0.6187500000       0.2375000000       0.6187500000      1.0
+    0.6250000000       0.2500000000       0.6250000000      1.0 !U
+    0.3750000000       0.3750000000       0.7500000000      1.0 !K
+    0.3691406250       0.3691406250       0.7382812500      1.0
+    0.3632812500       0.3632812500       0.7265625000      1.0
+    0.3574218750       0.3574218750       0.7148437500      1.0
+    .
+    .
+    .
+    0.0058593750       0.0058593750       0.0117187500      1.0
+    0.0000000000       0.0000000000       0.0000000000      1.0 !G
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Explicitly listing kpoints as ‘’!kpoint” is important for labels</p></li>
+</ul>
+<p>To perform spincalcs set nspin = 2 and starting_magnetization(1)= 0.7</p>
+</section>
+<section id="lobster">
+<h2>4. Lobster<a class="headerlink" href="#lobster" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Required files : scf.in, scf.out, lobsterin, lobsterout, FATBAND*.lobter files</p></li>
+<li><p>flag           : code=’lobster’, lobstercode=’qe’</p></li>
+</ul>
+<p>Currently supported for Lobster with Quantum Espresso v6.3.</p>
+<p>You must have the following settings for lobster:</p>
+<ul class="simple">
+<li><p>wf_collect = .true. in CONTROL</p></li>
+<li><p>nosym = .TRUE., noinv = .TRUE. in SYSTEM</p></li>
+</ul>
+<p>The kpoints for a lobster file must be listed in the scf.in file as the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>K_POINTS crystal
+520
+0.0000000   0.0000000   0.0000000   1.0
+0.0000000   0.0000000   0.1428571   1.0
+0.0000000   0.0000000   0.2857143   1.0
+0.0000000   0.0000000   0.4285714   1.0
+.
+.
+.
+-0.1428571  -0.1428571  -0.2857143   1.0
+-0.1428571  -0.1428571  -0.1428571   1.0
+0.0000000000     0.0000000000     0.0000000000 0.0000 !G
+0.0200000000     0.0200000000     0.0200000000 0.0000
+.
+.
+.
+0.4800000000     0.4800000000     0.4800000000 0.0000
+0.5000000000     0.5000000000     0.5000000000 0.0000 !T
+0.5110420726     0.4889579274     0.5000000000 0.0000
+.
+.
+.
+0.7539676705     0.2460323295     0.5000000000 0.0000
+0.7650097432     0.2349902568     0.5000000000 0.0000 !H2
+0.5000000000    -0.2349902568     0.2349902568 0.0000 !H0
+0.5000000000    -0.2238002446     0.2238002446 0.0000
+.
+.
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>The k meth and kpath must be listed explicitly. kmesh gets a weight of 1, and the path gets a weight of 0.</p></li>
+<li><p>Explicitly listing kpoints as ‘’!kpoint” on the k path is important for labels</p></li>
+</ul>
+<p>To perform spincalcs set nspin = 2 and starting_magnetization(1)= 0.7</p>
+<p>lobster_input_file must include explicit bands such as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">createFatband</span> <span class="n">F</span> <span class="mi">2</span><span class="n">p_x</span> <span class="mi">2</span><span class="n">p_y</span> <span class="mi">2</span><span class="n">p_z</span> <span class="mi">2</span><span class="n">s</span>
+<span class="n">createFatband</span> <span class="n">Li</span> <span class="mi">1</span><span class="n">s</span> <span class="mi">2</span><span class="n">s</span>
+</pre></div>
+</div>
+<p>Follow instructions on how to perform a Lobster analysis with Quantum Espresso. Also refer to the files in the relevant <code class="docutils literal notranslate"><span class="pre">examples</span></code> directory.</p>
+</section>
+<section id="abinit">
+<h2>5. Abinit<a class="headerlink" href="#abinit" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Required files : PROCAR, &lt;abinitoutput&gt;.out</p></li>
+<li><p>flag           : code=’abinit’</p></li>
+</ul>
+<p>Abinit version <span class="math notranslate nohighlight">\(9.x^*\)</span> generates a PROCAR similar to that of VASP when <code class="docutils literal notranslate"><span class="pre">prtprocar</span></code> is set in the input file.
+To provide the Abinit output file, use the flag <code class="docutils literal notranslate"><span class="pre">abinit_output=&lt;nameofoutputfile&gt;</span></code> in PyProcar functions.</p>
+<p>When running Abinit in parallel the PROCAR is split into multiple files. PyProcar’s <code class="docutils literal notranslate"><span class="pre">cat</span></code> function can merge these files together as explained in the section <a class="reference internal" href="cat.html#labelcat"><span class="std std-ref">Concatenating multiple calculations</span></a>. This also has an option to fix formatting issues in the Abinit PROCAR if needed.</p>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="tutorials.html" class="btn btn-neutral float-right" title="Tutorials" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="cite.html" class="btn btn-neutral float-left" title="How to cite" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Romero Group.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
